@@ -1,0 +1,36 @@
+PCR primer pair for 66 seq. MSA, amplicon: 549:738 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: GGCGANCTSATCGARATCCG at 549:568
+Reverse: SYGCATGAAATARAGYCCSTCCG at 716:738
+Tm: 56.0±0.1 °C
+PCR primer pair for 66 seq. MSA, amplicon: 548:737 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: BGGCGANCTSATCGARATCC at 548:567
+Reverse: YGCATGAAATARAGYCCSTCC at 717:737
+Tm: 53.8±0.6 °C
+PCR primer pair for 66 seq. MSA, amplicon: 550:739 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: GCGANCTSATCGARATCCG at 550:568
+Reverse: CSYGCATGAAATARAGYCCSTCC at 717:739
+Tm: 53.5±1.1 °C
+PCR primer pair for 66 seq. MSA, amplicon: 550:739 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: GCGANCTSATCGARATCCGC at 550:569
+Reverse: CSYGCATGAAATARAGYCCSTCC at 717:739
+Tm: 55.8±1.1 °C
+PCR primer pair for 66 seq. MSA, amplicon: 548:737 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: BGGCGANCTSATCGARATCC at 548:567
+Reverse: YGCATGAAATARAGYCCSTCCG at 716:737
+Tm: 55.6±1.2 °C
+PCR primer pair for 66 seq. MSA, amplicon: 549:738 (190bp)
+                                                     >______190bp______<       
+|==========================================================================768|
+Forward: GGCGANCTSATCGARATCCG at 549:568
+Reverse: SYGCATGAAATARAGYCCSTCC at 717:738
+Tm: 54.2±1.9 °C

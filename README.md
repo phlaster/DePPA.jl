@@ -1,4 +1,4 @@
-# DEPPA
+# DEPPA - DEgenerate Primer Pair Assembler
 
 [![Build Status](https://github.com/phlaster/DEPPA.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/phlaster/DEPPA.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
@@ -6,20 +6,20 @@
 # Quickstart
 
 ```julia
-using DEPPA, MAFFT_jll
+using DEPPA
+using MAFFT_jll, SeqFold # for full features
 
-nal = "ActR.fasta"
+file = "test/assets/TruA.fasta.gz"
+aln = MSA(file; mafft=true, bootstrap=10)
 
-m = MSA(nal, mafft=true, minor_threshold=0.05, bootstrap=200);
+fwds = construct_primers(aln)
+revs = construct_primers(aln; is_forward=false)
 
-pfs = construct_primers(m);
-prs = construct_primers(m, is_forward=false);
-amplicons = best_pairs(pfs, prs, amplicon_len=150:999);
+ppairs = best_pairs(fwds, revs; amplicon_len=190:190)
 
-open("out.txt", "w") do f
-    for pp in amplicons
+open("example.txt", "w") do f
+    for pp in ppairs
         show(f, MIME"text/plain"(), pp)
-        println(f)
         println(f)
     end
 end

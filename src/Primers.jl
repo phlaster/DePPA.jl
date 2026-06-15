@@ -111,7 +111,11 @@ function construct_primers(
     primers = Primer{DegenOligo}[]
     L = length(msa)
     base_count = get_base_count(msa)
-    prog = Progress(length(length_range); desc="Constructing... ", color=:white, barlen=10)
+    prog = Progress(length(length_range);
+        desc=is_forward ? "Constructing F..." : "Constructing R...",
+        color=:white,
+        barlen=10
+    )
     l = ReentrantLock()
     
     Threads.@threads for len in length_range
