@@ -4,13 +4,13 @@ export AbstractPrimer
 export Primer
 export construct_primers, best_pairs
 
-using ..Oligs
+using ..Oligos
 using ..Alignments
 
 using ProgressMeter
 using Statistics
 
-abstract type AbstractPrimer{T<:Union{Olig,DegenOlig}} end
+abstract type AbstractPrimer{T<:Union{Oligo,DegenOligo}} end
 
 struct Primer{T} <: AbstractPrimer{T}
     msa::AbstractMSA
@@ -39,12 +39,12 @@ function Primer(
     _cons = consensus_degen(msa, interval; slack=slack)
     gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
     
-    underlying_olig = DegenOlig(String(gapped_cons), string(descr))
+    underlying_oligo = DegenOligo(String(gapped_cons), string(descr))
     
-    Tm = _ext_tm(underlying_olig; max_samples=max_samples, conf_int=tm_conf_int, conditions=tm_conds)
-    dG = _ext_dg(underlying_olig; max_samples=max_samples, temp=dg_temp)
-    GC = _ext_gc_content(underlying_olig)
-    Primer(msa, interval, is_forward, underlying_olig, tail_length, Tm, dG, GC, slack)
+    Tm = _ext_tm(underlying_oligo; max_samples=max_samples, conf_int=tm_conf_int, conditions=tm_conds)
+    dG = _ext_dg(underlying_oligo; max_samples=max_samples, temp=dg_temp)
+    GC = _ext_gc_content(underlying_oligo)
+    Primer(msa, interval, is_forward, underlying_oligo, tail_length, Tm, dG, GC, slack)
 end
 
 # These are overloaded in ext/SeqFoldExt.jl to load SeqFold.jl library dynamically
@@ -73,14 +73,14 @@ Base.iterate(primer::AbstractPrimer, state...) = iterate(primer.consensus, state
 Base.getindex(primer::AbstractPrimer, i::Int) = getindex(primer.consensus, i)
 Base.getindex(primer::AbstractPrimer, r::UnitRange{Int}) = getindex(primer.consensus, r)
 
-Base.convert(::Type{DegenOlig}, primer::AbstractPrimer) = primer.consensus
+Base.convert(::Type{DegenOligo}, primer::AbstractPrimer) = primer.consensus
 
-Oligs.n_unique_oligs(primer::AbstractPrimer) = n_unique_oligs(primer.consensus)
-Oligs.n_deg_pos(primer::AbstractPrimer) = n_deg_pos(primer.consensus)
-Oligs.description(primer::AbstractPrimer) = description(primer.consensus)
-Oligs.hasgaps(::AbstractPrimer) = false
-Oligs.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
-Oligs.olig_range(primer::AbstractPrimer) = primer.pos
+Oligos.n_unique_oligos(primer::AbstractPrimer) = n_unique_oligos(primer.consensus)
+Oligos.n_deg_pos(primer::AbstractPrimer) = n_deg_pos(primer.consensus)
+Oligos.description(primer::AbstractPrimer) = description(primer.consensus)
+Oligos.hasgaps(::AbstractPrimer) = false
+Oligos.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
+Oligos.oligo_range(primer::AbstractPrimer) = primer.pos
 
 function construct_primers(
     msa::AbstractMSA;
@@ -94,21 +94,21 @@ function construct_primers(
     tm_range::UnitRange{Int}=55:60,
     min_delta_g::Real=-5.0,
     min_msadepth::Float64=0.75,
-    max_olig_variants::Int=100,
+    max_oligo_variants::Int=100,
     max_samples::Int=5000,
     tm_conf_int::Real=0.2,
     tm_conds=:pcr,
     dg_temp::Real=mean(tm_range)
-)::Vector{Primer{DegenOlig}}
+)::Vector{Primer{DegenOligo}}
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
-    1 ≤ max_olig_variants || throw(ArgumentError("max_olig_variants must be at least 1"))
+    1 ≤ max_oligo_variants || throw(ArgumentError("max_oligo_variants must be at least 1"))
     2 ≤ minimum(length_range) || throw(ArgumentError("lower bound of length_range must be ≥ 2nt"))
     0 ≤ tail_length ≤ minimum(length_range) || throw(ArgumentError("tail_length must be [0, length_range.start]"))
     0 ≤ gc_range.start ≤ gc_range.stop ≤ 100 || throw(ArgumentError("gc_range must be in [0, 100]"))
     0 ≤ tm_range.start ≤ tm_range.stop ≤ 100 || throw(ArgumentError("tm_range must be in [0, 100]"))
     
-    primers = Primer{DegenOlig}[]
+    primers = Primer{DegenOligo}[]
     L = length(msa)
     base_count = get_base_count(msa)
     prog = Progress(length(length_range); desc="Constructing... ", color=:white, barlen=10)
@@ -149,10 +149,10 @@ function construct_primers(
             gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
             hasgaps(gapped_cons) && continue
             
-            cons = DegenOlig(gapped_cons)
-            n_unique_oligs(cons) > max_olig_variants && continue
+            cons = DegenOligo(gapped_cons)
+            n_unique_oligos(cons) > max_oligo_variants && continue
 
-            cons = n_unique_oligs(cons) == 1 ? Olig(cons) : cons
+            cons = n_unique_oligos(cons) == 1 ? Oligo(cons) : cons
             
             gc = _ext_gc_content(cons)
             !(gc_range.start / 100 <= gc <= gc_range.stop / 100) && continue
@@ -163,7 +163,7 @@ function construct_primers(
             Tm = _ext_tm(cons; max_samples=max_samples, conf_int=tm_conf_int, conditions=tm_conds)
             (tm_range.stop < first(Tm.conf) || last(Tm.conf) < tm_range.start) && continue
             
-            primer = Primer{DegenOlig}(msa, interval, is_forward, cons, tail_len, Tm, dg_val, gc, slack)
+            primer = Primer{DegenOligo}(msa, interval, is_forward, cons, tail_len, Tm, dg_val, gc, slack)
 
             lock(l)
             try
@@ -183,8 +183,8 @@ function best_pairs(
     reverses::Vector{<:Primer};
     amplicon_len::UnitRange{Int}=0:9999,
     max_tm_diff::Real=4.0
-)::Vector{Pair{Primer{DegenOlig}}}
-    pairs = Pair{Primer{DegenOlig}}[]
+)::Vector{Pair{Primer{DegenOligo}}}
+    pairs = Pair{Primer{DegenOligo}}[]
     (isempty(forwards) || isempty(reverses)) && return pairs
 
     all(p -> p.is_forward, forwards)  || throw(ArgumentError("All forwards must be forward primers"))

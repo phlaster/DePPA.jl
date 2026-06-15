@@ -4,7 +4,7 @@ using JET
 using Random
 
 using DEPPA
-using DEPPA.Oligs
+using DEPPA.Oligos
 using DEPPA.Alignments
 using DEPPA.Primers
 
@@ -18,7 +18,7 @@ Random.seed!(42)
         JET.test_package(DEPPA; target_modules=(DEPPA,))
     end
     
-    @testset "Oligs" include("test_oligs.jl")
+    @testset "Oligos" include("test_oligos.jl")
     @testset "Alignments" include("test_alignments.jl")
 
     @testset "Primers" include("test_primers.jl")

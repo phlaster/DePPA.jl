@@ -5,7 +5,7 @@ using FastaIO
 using ProgressMeter
 
 using DEPPA.Alignments
-using DEPPA.Oligs  
+using DEPPA.Oligos  
 using DEPPA.Primers
 
 import DEPPA.Primers: construct_primers
@@ -47,7 +47,7 @@ import DEPPA.Primers: construct_primers
 # )
 #     candidates = construct_primers(
 #         msa; 
-#         max_olig_variants=max_primer_variants,
+#         max_oligo_variants=max_primer_variants,
 #         kwargs...
 #     )
 #     @info "Generated $(length(candidates)) candidate primers"
@@ -102,9 +102,9 @@ import DEPPA.Primers: construct_primers
 # )::Vector{String}
 #     variants = String[]
     
-#     if n_unique_oligs(primer) <= n_samples
-#         for olig in nondegens(primer.consensus)
-#             push!(variants, String(olig))
+#     if n_unique_oligos(primer) <= n_samples
+#         for oligo in nondegens(primer.consensus)
+#             push!(variants, String(oligo))
 #         end
 #     else
 #         rng = Random.MersenneTwister(12345)

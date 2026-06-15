@@ -2,7 +2,7 @@ function _show_primer_common(io::IO, primer::AbstractPrimer)
     println(io, "  Sequence: ", primer.consensus)
     println(io, "  Length: ", length(primer.consensus))
     println(io, "  Positions: ", primer.pos)
-    println(io, "  Unique variants: ", n_unique_oligs(primer))
+    println(io, "  Unique variants: ", n_unique_oligos(primer))
     println(io, "  Melting temperature: ", round(primer.tm.mean, digits=1), "°C (",
             round(primer.tm.conf[1], digits=1), "⋅",
             round(primer.tm.conf[2], digits=1), "°C)")
@@ -20,7 +20,7 @@ function Base.show(io::IO, primer::AbstractPrimer)
     print(io, "Primer(\"", seq_display, "\", len=$(length(primer.consensus)), ",
           "pos=$(primer.pos.start):$(primer.pos.stop), $dir_str")
 
-    print(io, ", degen=$(n_deg_pos(primer)), variants=$(n_unique_oligs(primer) > 10000 ? ">10k" : n_unique_oligs(primer)))")
+    print(io, ", degen=$(n_deg_pos(primer)), variants=$(n_unique_oligos(primer) > 10000 ? ">10k" : n_unique_oligos(primer)))")
     print(io, ", Tm=$(round(primer.tm.mean, digits=1))°C, ",
           "ΔG=$(round(primer.dg, digits=2))kcal/mol, ",
           "GC=$(round(primer.gc * 100, digits=1))%)")

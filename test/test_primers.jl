@@ -1,7 +1,7 @@
 using Test
 using DEPPA.Primers
 using DEPPA.Alignments
-using DEPPA.Oligs
+using DEPPA.Oligos
 using SeqFold
 
 @testset "Primers Tests" begin
@@ -18,9 +18,9 @@ using SeqFold
         msa = MSA(["ACGTACGT", "ACGTACGT"])
         tm = (mean=55.0, conf=(53.0, 57.0), min=53.0, max=57.0)
         
-        # Test with Olig consensus
-        olig_cons = Olig("ACGTTGCA", "TestOligPrimer")
-        p1 = Primer(msa, 1:8, true, olig_cons, 3, tm, -5.0, 0.5, 0.0)
+        # Test with Oligo consensus
+        oligo_cons = Oligo("ACGTTGCA", "TestOligoPrimer")
+        p1 = Primer(msa, 1:8, true, oligo_cons, 3, tm, -5.0, 0.5, 0.0)
         
         @test String(p1) == "ACGTTGCA"
         @test length(p1) == 8
@@ -28,29 +28,29 @@ using SeqFold
         @test collect(p1) == ['A', 'C', 'G', 'T', 'T', 'G', 'C', 'A']
         @test p1[1] == 'A'
         @test String(p1[2:4]) == "CGT"
-        @test convert(DegenOlig, p1) === olig_cons
-        @test n_unique_oligs(p1) == BigInt(1)
+        @test convert(DegenOligo, p1) === oligo_cons
+        @test n_unique_oligos(p1) == BigInt(1)
         @test n_deg_pos(p1) == 0
-        @test description(p1) == "TestOligPrimer"
+        @test description(p1) == "TestOligoPrimer"
         @test hasgaps(p1) == false
-        @test nondegens(p1)[1] == olig_cons
-        @test olig_range(p1) == 1:8
+        @test nondegens(p1)[1] == oligo_cons
+        @test oligo_range(p1) == 1:8
         
-        # Test with DegenOlig consensus
-        degen_cons = DegenOlig("ACGTSWCA", "TestDegenPrimer")
+        # Test with DegenOligo consensus
+        degen_cons = DegenOligo("ACGTSWCA", "TestDegenPrimer")
         p2 = Primer(msa, 1:8, true, degen_cons, 3, tm, -5.0, 0.5, 0.0)
         
         @test String(p2) == "ACGTSWCA"
         @test length(p2) == 8
-        @test n_unique_oligs(p2) == BigInt(4)
+        @test n_unique_oligos(p2) == BigInt(4)
         @test n_deg_pos(p2) == 2
         @test description(p2) == "TestDegenPrimer"
         @test hasgaps(p2) == false
-        @test olig_range(p2) == 1:8
+        @test oligo_range(p2) == 1:8
         
         # Test empty primer
-        empty_cons = Olig("", "EmptyPrimer")
-        p_empty = Primer{DegenOlig}(msa, 1:0, true, empty_cons, 3, tm, -5.0, 0.5, 0.0)
+        empty_cons = Oligo("", "EmptyPrimer")
+        p_empty = Primer{DegenOligo}(msa, 1:0, true, empty_cons, 3, tm, -5.0, 0.5, 0.0)
         @test isempty(p_empty)
         @test length(p_empty) == 0
     end
@@ -77,15 +77,15 @@ using SeqFold
         tm3 = (mean=60.0, conf=(58.0, 62.0), min=58.0, max=62.0)
         
         # Forwards
-        f1 = Primer{DegenOlig}(msa1, 1:4, true, Olig("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
-        f2 = Primer{DegenOlig}(msa1, 1:3, true, Olig("ACG"), 3, tm1, -5.0, 0.5, 0.0)
+        f1 = Primer{DegenOligo}(msa1, 1:4, true, Oligo("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
+        f2 = Primer{DegenOligo}(msa1, 1:3, true, Oligo("ACG"), 3, tm1, -5.0, 0.5, 0.0)
         
         # Reverses
-        r1 = Primer{DegenOlig}(msa1, 5:8, false, Olig("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
-        r2 = Primer{DegenOlig}(msa1, 3:6, false, Olig("GTAC"), 3, tm1, -5.0, 0.5, 0.0)
-        r3 = Primer{DegenOlig}(msa1, 5:8, false, Olig("ACGT"), 3, tm3, -5.0, 0.5, 0.0)
-        r4 = Primer{DegenOlig}(msa2, 5:8, false, Olig("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
-        r5 = Primer{DegenOlig}(msa1, 5:8, false, Olig("ACGT"), 3, tm2, -5.0, 0.5, 0.0)
+        r1 = Primer{DegenOligo}(msa1, 5:8, false, Oligo("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
+        r2 = Primer{DegenOligo}(msa1, 3:6, false, Oligo("GTAC"), 3, tm1, -5.0, 0.5, 0.0)
+        r3 = Primer{DegenOligo}(msa1, 5:8, false, Oligo("ACGT"), 3, tm3, -5.0, 0.5, 0.0)
+        r4 = Primer{DegenOligo}(msa2, 5:8, false, Oligo("ACGT"), 3, tm1, -5.0, 0.5, 0.0)
+        r5 = Primer{DegenOligo}(msa1, 5:8, false, Oligo("ACGT"), 3, tm2, -5.0, 0.5, 0.0)
 
         # Valid pair
         pairs = best_pairs([f1], [r1])

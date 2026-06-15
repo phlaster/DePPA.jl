@@ -9,10 +9,10 @@ $(isnothing(get(ENV, "CI", nothing)) ? ("\nPackage local path: $(pathof(DEPPA))"
 """
 DEPPA
 
-export Oligs, Primers, Alignments
+export Oligos, Primers, Alignments
 
 
-include("Oligs.jl")
+include("Oligos.jl")
 include("Alignments.jl")
 include("Primers.jl")
 

@@ -1,6 +1,6 @@
 using Test
 using DEPPA.Alignments
-using DEPPA.Oligs
+using DEPPA.Oligos
 using Random
 
 @testset "Alignments Tests" begin
@@ -101,7 +101,7 @@ using Random
         msa = MSA(["ACGT", "TGCA"])
         
         # getsequence
-        @test getsequence(msa, 1) isa GappedOlig
+        @test getsequence(msa, 1) isa GappedOligo
         @test String(getsequence(msa, 1)) == "ACGT"
         @test getsequence(msa, 1, 1) == 'A'
         @test getsequence(msa, 2, 4) == 'A'
@@ -159,7 +159,7 @@ using Random
     @testset "Consensus" begin
         msa = MSA(["ACGT", "ACGT"])
         @test consensus_major(msa, 1) == 'A'
-        @test consensus_major(msa, 1:4) isa GappedOlig
+        @test consensus_major(msa, 1:4) isa GappedOligo
         @test String(consensus_major(msa, 1:4)) == "ACGT"
         @test String(consensus_major(msa)) == "ACGT"
         
@@ -266,7 +266,7 @@ using Random
         @test size(view) == (2, 2)
         
         # Sequences from view
-        @test getsequence(view, 1) isa OligView
+        @test getsequence(view, 1) isa OligoView
         @test String(getsequence(view, 1)) == "CG"
         @test String(getsequence(view, 2)) == "GC"
         @test getsequence(view, 1, 1) == 'C'
@@ -290,7 +290,7 @@ using Random
         @test length(cons) == 2
         
         # Colon indexing
-        @test msa[1, :] isa GappedOlig
+        @test msa[1, :] isa GappedOligo
         @test String(msa[1, :]) == "ACGT"
         @test msa[:, 1] isa MSAView
         @test msa[:, :] isa MSAView

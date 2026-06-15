@@ -1,7 +1,7 @@
 module Alignments
 include("utils.jl")
 
-using ..Oligs
+using ..Oligos
 using ProgressMeter
 using FastaIO
 using Random
@@ -63,13 +63,13 @@ struct MSA <: AbstractMSA
         bootstrap >= 0 || throw(ArgumentError("bootstrap must be non-negative"))
         isnothing(seed) || Random.seed!(seed)
 
-        isempty(seqs) && return new(GappedOlig[], zeros(4, 0), bootstrap)
+        isempty(seqs) && return new(GappedOligo[], zeros(4, 0), bootstrap)
 
         base_count = _bootstrap_base_counts(seqs, bootstrap;
             progress_label="Bootstrap, $bootstrap it.",
             barlen=19
         )
-        gapped_seqs = GappedOlig.(seqs)
+        gapped_seqs = GappedOligo.(seqs)
         return new(gapped_seqs, base_count, bootstrap)
     end
 end
@@ -120,8 +120,8 @@ function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, boot
 
     mafft && _align!(fasta_content)
 
-    gapped_oligs = [GappedOlig(seq, desc) for (desc, seq) in fasta_content]
-    return MSA(gapped_oligs; bootstrap=bootstrap, seed=seed)
+    gapped_oligos = [GappedOligo(seq, desc) for (desc, seq) in fasta_content]
+    return MSA(gapped_oligos; bootstrap=bootstrap, seed=seed)
 end
 MSA(fasta::AbstractString; kwargs...) = MSA(x->true, fasta; kwargs...)
 
@@ -208,7 +208,7 @@ Arguments:
 - col: Position index (1-based, optional)
 
 Returns:
-- For getsequence(msa, row): The full sequence (GappedOlig)
+- For getsequence(msa, row): The full sequence (GappedOligo)
 - For getsequence(msa, row, col): Single character at position
 """
 getsequence(msa::MSA, row::Int) = msa.seqs[row]
@@ -333,7 +333,7 @@ Arguments:
 
 Returns:
 - Char for single position (most common base)
-- GappedOlig for multiple positions
+- GappedOligo for multiple positions
 
 Uses simple majority rule, ignoring gap characters.
 """
@@ -347,7 +347,7 @@ end
 function consensus_major(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa))
     seq = join(consensus_major(msa, j) for j in interval)
     desc = "Major consensus for $(nseqs(msa)) seq MSA"
-    return GappedOlig(seq, desc)
+    return GappedOligo(seq, desc)
 end
 
 """
@@ -364,7 +364,7 @@ Arguments:
 
 Returns:
 - Char for single position (IUPAC ambiguity code)
-- GappedOlig for multiple positions
+- GappedOligo for multiple positions
 
 Bases with frequency > slack are included in the degeneracy.
 """
@@ -379,10 +379,10 @@ function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)::Char
     bs = NON_DEGEN_BASES[active]
     return IUPAC_V2B[bs]
 end
-function consensus_degen(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa); slack::Real=0.0)::GappedOlig
+function consensus_degen(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa); slack::Real=0.0)::GappedOligo
     seq = join(consensus_degen(msa, j; slack=slack) for j in interval)
     desc = "Degenerate consensus for $(nseqs(msa)) seq MSA"
-    return GappedOlig(seq, desc)
+    return GappedOligo(seq, desc)
 end
 
 """
@@ -416,12 +416,12 @@ function dry_msa(msa::AbstractMSA; gap_content::Real=1.0)
         end
     end
     if isempty(kept_rows)
-        return MSA(GappedOlig[]; bootstrap=bval(msa))
+        return MSA(GappedOligo[]; bootstrap=bval(msa))
     end
-    new_seqs = Vector{GappedOlig}(undef, length(kept_rows))
+    new_seqs = Vector{GappedOligo}(undef, length(kept_rows))
     for (k, row) in enumerate(kept_rows)
         sub_str = join(getsequence(msa, row, j) for j in non_gap_cols)
-        new_seqs[k] = GappedOlig(sub_str, description(getsequence(msa, row)))
+        new_seqs[k] = GappedOligo(sub_str, description(getsequence(msa, row)))
     end
     return MSA(new_seqs; bootstrap=bval(msa))
 end
