@@ -11,6 +11,47 @@ export nseqs, width, height, getsequence, get_base_count
 export msadepth, msadet, root, bval
 export consensus_major, consensus_degen, dry_msa, nucleotide_diversity
 
+function _bootstrap_base_counts(
+    seqs::Vector{<:AbstractString}, 
+    bootstrap::Int;
+    progress_label::String, 
+    barlen::Int
+)
+    n = length(seqs)
+    L = length(first(seqs))
+    all(length(s) == L for s in seqs) || throw(ArgumentError("All sequences must have the same length"))
+    base_count = zeros(4, L)
+    if bootstrap > 0
+        @showprogress desc=progress_label barlen=barlen for b in 1:bootstrap
+            boot_rows = rand(1:n, n)
+            boot_seqs = seqs[boot_rows]
+            
+            Threads.@threads for j in 1:L
+                pos_counts = zeros(4)
+                for s in boot_seqs
+                    c = uppercase(s[j])
+                    probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
+                    pos_counts .+= probs
+                end
+                current_freq = pos_counts / n
+                base_count[:, j] += (current_freq - base_count[:, j]) / b
+            end
+        end
+    else
+        Threads.@threads for j in 1:L
+            counts = zeros(4)
+            for s in seqs
+                c = uppercase(s[j])
+                probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
+                counts .+= probs
+            end
+            base_count[:, j] = counts / n
+        end
+    end
+    return base_count
+end
+
+
 abstract type AbstractMSA end
 
 struct MSA <: AbstractMSA
@@ -18,52 +59,16 @@ struct MSA <: AbstractMSA
     base_count::Matrix{Float64}
     bootstrap::Int
 
-    function _bootstrap_base_counts(
-        seqs::Vector{<:AbstractString}, 
-        bootstrap::Int;
-        progress_label::String, 
-        barlen::Int
-    )
-        n = length(seqs)
-        L = length(first(seqs))
-        all(length(s) == L for s in seqs) || throw(ArgumentError("All sequences must have the same length"))
-        base_count = zeros(4, L)
-        if bootstrap > 0
-            @showprogress desc=progress_label barlen=barlen for b in 1:bootstrap
-                boot_rows = rand(1:n, n)
-                boot_seqs = seqs[boot_rows]
-                
-                Threads.@threads for j in 1:L
-                    pos_counts = zeros(4)
-                    for s in boot_seqs
-                        c = uppercase(s[j])
-                        probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
-                        pos_counts .+= probs
-                    end
-                    current_freq = pos_counts / n
-                    base_count[:, j] += (current_freq - base_count[:, j]) / b
-                end
-            end
-        else
-            Threads.@threads for j in 1:L
-                counts = zeros(4)
-                for s in seqs
-                    c = uppercase(s[j])
-                    probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
-                    counts .+= probs
-                end
-                base_count[:, j] = counts / n
-            end
-        end
-        return base_count
-    end
     function MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
         bootstrap >= 0 || throw(ArgumentError("bootstrap must be non-negative"))
         isnothing(seed) || Random.seed!(seed)
 
         isempty(seqs) && return new(GappedOlig[], zeros(4, 0), bootstrap)
 
-        base_count = _bootstrap_base_counts(seqs, bootstrap; progress_label="Bootstrap, $bootstrap it.", barlen=19)
+        base_count = _bootstrap_base_counts(seqs, bootstrap;
+            progress_label="Bootstrap, $bootstrap it.",
+            barlen=19
+        )
         gapped_seqs = GappedOlig.(seqs)
         return new(gapped_seqs, base_count, bootstrap)
     end
