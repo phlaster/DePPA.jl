@@ -14,35 +14,36 @@ export unfolded_proportion
 """
     AbstractOligo <: AbstractString
 
-Abstract supertype for all oligomer types in DEPPA.
+Represent the abstract supertype for all oligomer types in DEPPA.
 """
 abstract type AbstractOligo <: AbstractString end
 
 """
     AbstractDegen <: AbstractOligo
 
-Abstract supertype for oligomers that may contain degenerate (IUPAC) bases.
+Represent the abstract supertype for oligomers that may contain degenerate (IUPAC) bases.
 """
 abstract type AbstractDegen <: AbstractOligo end
 
 """
     AbstractGapped <: AbstractDegen
 
-Abstract supertype for oligomers that may contain gap characters ('-').
+Represent the abstract supertype for oligomers that may contain gap characters (`-`).
 """
 abstract type AbstractGapped <: AbstractDegen end
 
 """
     description(oligo::AbstractOligo) -> String
 
-Returns the description string associated with the oligomer.
+Return the description string associated with the oligomer.
 """
 description(::AbstractString) = ""
 
 """
     Oligo(seq::AbstractString, descr::Union{AbstractString,Integer}="")
 
-A concrete type representing a non-degenerate nucleic acid sequence (only A, C, G, T).
+Represent a non-degenerate nucleic acid sequence (only `A`, `C`, `G`, `T`).
+
 Sequences are automatically converted to uppercase.
 """
 struct Oligo <: AbstractOligo
@@ -65,7 +66,7 @@ end
 """
     DegenOligo(seq::AbstractString, descr::Union{AbstractString,Integer}="")
 
-A concrete type representing a degenerate nucleic acid sequence, allowing IUPAC ambiguity codes.
+Represent a degenerate nucleic acid sequence, allowing IUPAC ambiguity codes.
 """
 struct DegenOligo <: AbstractDegen
     seq::String
@@ -92,7 +93,7 @@ end
 """
     GappedOligo(seq::AbstractString, descr::Union{AbstractString,Integer}="")
 
-A concrete type representing a gapped nucleic acid sequence, allowing gap characters ('-').
+Represent a gapped nucleic acid sequence, allowing gap characters (`-`).
 """
 struct GappedOligo <: AbstractGapped
     parent::DegenOligo
@@ -137,7 +138,7 @@ end
 """
     OligoView{T<:AbstractOligo} <: AbstractOligo
 
-A lightweight view into an `AbstractOligo`, representing a contiguous subsequence.
+Represent a lightweight view into an [`AbstractOligo`](@ref) as a contiguous subsequence.
 """
 struct OligoView{T<:AbstractOligo} <: AbstractOligo
     parent::T
@@ -152,7 +153,7 @@ end
 """
     NonDegenIterator{T<:AbstractOligo}
 
-An iterator that yields all unique non-degenerate sequences represented by a degenerate oligomer.
+Iterate over all unique non-degenerate sequences represented by a degenerate oligomer.
 """
 struct NonDegenIterator{T<:AbstractOligo}
     oligo::T
@@ -413,7 +414,8 @@ GappedOligo(seq::AbstractString) = GappedOligo(seq, description(seq))
 ##########################
 """
     oligo_range(oligo::AbstractOligo) -> UnitRange{Int}
-Returns the index range of the oligomer or view.
+
+Return the index range of the oligomer or view.
 """
 oligo_range(oligo::AbstractOligo) = 1:length(oligo)
 oligo_range(ov::OligoView) = ov.range
@@ -423,7 +425,10 @@ description(ov::OligoView{<:GappedOligo}) = parent(parent(ov)).description
 
 """
     hasgaps(oligo::AbstractOligo) -> Bool
-Returns `true` if the sequence contains gap characters ('-'), `false` otherwise.
+
+Return `true` if the sequence contains gap characters (`-`), and `false` otherwise.
+
+See also [`getgaps`](@ref), [`GappedOligo`](@ref).
 """
 hasgaps(::AbstractOligo) = false
 hasgaps(ov::OligoView{Oligo}) = false
@@ -435,7 +440,10 @@ const EMPTY_GAPS_VECTOR = Vector{Pair{Int, Int}}()
 
 """
     getgaps(oligo::AbstractOligo) -> Vector{Pair{Int, Int}}
-Returns a vector of gap locations and lengths for a gapped oligomer.
+
+Return a vector of gap locations and lengths for a gapped oligomer.
+
+See also [`hasgaps`](@ref), [`GappedOligo`](@ref).
 """
 getgaps(::AbstractOligo) = EMPTY_GAPS_VECTOR
 getgaps(go::GappedOligo) = go.gaps
@@ -443,7 +451,10 @@ getgaps(ov::OligoView{GappedOligo}) = ov |> GappedOligo |> getgaps
 
 """
     n_unique_oligos(oligo::AbstractOligo) -> BigInt
-Returns the total number of unique non-degenerate sequences represented by the oligomer.
+
+Return the total number of unique non-degenerate sequences represented by the oligomer.
+
+See also [`n_deg_pos`](@ref), [`nondegens`](@ref).
 """
 n_unique_oligos(::AbstractOligo) = BigInt(1)
 n_unique_oligos(d::DegenOligo) = d.n_unique_oligos
@@ -452,7 +463,10 @@ n_unique_oligos(go::GappedOligo) = n_unique_oligos(parent(go))
 
 """
     n_deg_pos(oligo::AbstractOligo) -> Int
-Returns the number of degenerate (ambiguity) positions in the sequence.
+
+Return the number of degenerate (ambiguity) positions in the sequence.
+
+See also [`n_unique_oligos`](@ref), [`nondegens`](@ref).
 """
 n_deg_pos(::AbstractOligo) = 0
 n_deg_pos(d::DegenOligo) = d.n_deg_pos
@@ -461,8 +475,12 @@ n_deg_pos(go::GappedOligo) = n_deg_pos(parent(go))
 
 """
     nondegens(oligo::AbstractOligo)
-Returns an iterator over all unique non-degenerate sequences represented by the oligomer.
-For non-degenerate sequences, returns a tuple containing the sequence itself.
+
+Return an iterator over all unique non-degenerate sequences represented by the oligomer.
+
+For non-degenerate sequences, return a tuple containing the sequence itself.
+
+See also [`NonDegenIterator`](@ref), [`sampleNondeg`](@ref).
 """
 nondegens(oligo::Oligo) = isempty(oligo) ? Tuple{}() : (oligo,)
 nondegens(go::GappedOligo) = hasgaps(go) ?
@@ -476,7 +494,10 @@ nondegens(ov::OligoView{T}) where T = nondegens(T(ov))
 
 """
     sampleChar(oligo::AbstractOligo) -> Char
-Returns a randomly sampled character from the oligomer sequence.
+
+Return a randomly sampled character from the oligomer sequence.
+
+See also [`sampleView`](@ref), [`sampleNondeg`](@ref).
 """
 function sampleChar(oligo::AbstractOligo)
     n = length(oligo)
@@ -486,7 +507,10 @@ end
 
 """
     sampleView(oligo::AbstractOligo, len::Int) -> OligoView
-Returns a random contiguous subsequence (view) of the specified length.
+
+Return a random contiguous subsequence (view) of the specified length.
+
+See also [`OligoView`](@ref), [`sampleChar`](@ref).
 """
 function sampleView(oligo::AbstractOligo, len::Int)
     n = length(oligo)
@@ -505,7 +529,10 @@ _base_oligo_type(::Type{T}) where {T<:AbstractOligo} = T  # fallback
 
 """
     sampleNondeg(oligo::AbstractOligo) -> AbstractOligo
-Returns a randomly sampled non-degenerate sequence from the possible variants of the oligomer.
+
+Return a randomly sampled non-degenerate sequence from the possible variants of the oligomer.
+
+See also [`nondegens`](@ref), [`sample_max_gc`](@ref), [`sample_min_gc`](@ref).
 """
 sampleNondeg(o::Oligo) = o
 sampleNondeg(o::OligoView{Oligo}) = Oligo(o)
@@ -524,7 +551,10 @@ end
 
 """
     sample_max_gc(oligo::AbstractOligo) -> AbstractOligo
-Returns a non-degenerate sequence sampled from the oligomer, maximizing GC content.
+
+Return a non-degenerate sequence sampled from the oligomer, maximizing GC content.
+
+See also [`sample_min_gc`](@ref), [`sampleNondeg`](@ref).
 """
 function sample_max_gc(d::T) where T <: AbstractOligo
     (isempty(d) || T == Oligo) && return d
@@ -543,7 +573,10 @@ end
 
 """
     sample_min_gc(oligo::AbstractOligo) -> AbstractOligo
-Returns a non-degenerate sequence sampled from the oligomer, minimizing GC content.
+
+Return a non-degenerate sequence sampled from the oligomer, minimizing GC content.
+
+See also [`sample_max_gc`](@ref), [`sampleNondeg`](@ref).
 """
 function sample_min_gc(d::T) where T <: AbstractOligo
     (isempty(d) || T == Oligo) && return d

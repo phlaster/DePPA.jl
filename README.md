@@ -6,8 +6,11 @@
 # Quickstart
 
 ```julia
-using DEPPA
-using MAFFT_jll, SeqFold # for full features
+using DEPPA.Alignments
+using MAFFT_jll # for sequence aligning during MSA construction
+
+using DEPPA.Primers
+using SeqFold # for thermodynamic calculations
 
 file = "test/assets/TruA.fasta.gz"
 aln = MSA(file; mafft=true, bootstrap=10)

@@ -54,12 +54,14 @@ end
 
 """
     AbstractMSA
+
 Abstract supertype for Multiple Sequence Alignments.
 """
 abstract type AbstractMSA end
 
 """
     MSA <: AbstractMSA
+
 A concrete Multiple Sequence Alignment type. Stores sequences and precomputed base frequencies.
 """
 struct MSA <: AbstractMSA
@@ -68,9 +70,11 @@ struct MSA <: AbstractMSA
     bootstrap::Int
 
     """
-    MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
-    Constructs an MSA from a vector of equal-length strings.
-    If `bootstrap > 0`, computes base frequencies using bootstrap resampling.
+        MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
+
+    Construct an MSA from a vector of equal-length strings.
+
+    If `bootstrap > 0`, compute base frequencies using bootstrap resampling.
     """
     function MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
         bootstrap >= 0 || throw(ArgumentError("bootstrap must be non-negative"))
@@ -98,10 +102,9 @@ struct MSAView <: AbstractMSA
 end
 
 """
-    MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
+    MSAView <: AbstractMSA
 
-Constructs a new concrete `MSA` by materializing the sliced rows and columns 
-from an `MSAView` into a standalone alignment.
+A lightweight view into an [`MSA`](@ref), representing a submatrix of rows and columns.
 """
 function MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
     seqs = [getsequence(msav, i) for i in 1:nseqs(msav)]
@@ -113,14 +116,20 @@ _returnrows(m::MSAView) = MSAView(m.parent, 1:height(m.parent), m.cols)
 
 """
     root(msa::AbstractMSA) -> MSA
-Returns the underlying root `MSA` object, resolving any `MSAView` layers.
+
+Return the underlying root `MSA` object, resolving any `MSAView` layers.
+
+See also [`bval`](@ref), [`MSAView`](@ref).
 """
 root(msa::MSA) = msa
 root(msav::MSAView) = root(msav.parent)
 
 """
     bval(msa::AbstractMSA) -> Int
-Returns the number of bootstrap iterations used to compute base frequencies.
+
+Return the number of bootstrap iterations used to compute base frequencies.
+
+See also [`root`](@ref), [`MSA`](@ref).
 """
 bval(msa::MSA) = msa.bootstrap
 bval(msav::MSAView) = root(msav).bootstrap
@@ -134,9 +143,15 @@ end
 
 """
     MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, bootstrap::Int=0, seed=nothing)
-Constructs an MSA from a FASTA file. 
-- `predicate`: A function that takes the sequence description and returns `true` to include the sequence.
-- `mafft`: If `true`, aligns the sequences using MAFFT (requires `MAFFT_jll` to be loaded).
+
+Construct an MSA from a FASTA file.
+
+# Arguments
+- `predicate::Function`: A function that takes the sequence description and returns `true` to include the sequence.
+- `fasta::AbstractString`: Path to the FASTA file.
+- `mafft::Bool=false`: If `true`, align the sequences using MAFFT (requires `MAFFT_jll` to be loaded).
+- `bootstrap::Int=0`: Number of bootstrap iterations for base frequencies.
+- `seed=nothing`: Random seed for reproducibility.
 """
 function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, bootstrap::Int=0, seed=nothing)
     fasta_content = Tuple{String, String}[]
@@ -171,11 +186,13 @@ MSA(fasta::AbstractString; kwargs...) = MSA(x->true, fasta; kwargs...)
 """
     getindex(msa::AbstractMSA, rows, cols)
 
-Multi-dimensional indexing into MSA. Supports:
-- msa[row, col] - single element
-- msa[row_range, col_range] - submatrix view
-- msa[row, :] - entire row
-- msa[:, col_range] - entire column range
+Get a submatrix or element from an MSA using multi-dimensional indexing.
+
+Supports:
+- `msa[row, col]`: single element
+- `msa[row_range, col_range]`: submatrix view
+- `msa[row, :]`: entire row
+- `msa[:, col_range]`: entire column range
 """
 function Base.getindex(msa::AbstractMSA, rows::UnitRange{Int}, cols::UnitRange{Int})
     root_msa = root(msa)
@@ -214,7 +231,10 @@ function Base.checkbounds(::AbstractMSA, ::Colon, ::Colon) end
 
 """
     nseqs(msa::AbstractMSA) -> Int
-Returns the number of sequences (rows) in the alignment.
+
+Return the number of sequences (rows) in the alignment.
+
+See also [`height`](@ref), [`width`](@ref), [`length`](@ref).
 """
 nseqs(msa::MSA) = length(msa.seqs)
 nseqs(v::MSAView) = length(v.rows)
@@ -224,13 +244,19 @@ Base.length(v::MSAView) = length(v.cols)
 
 """
     width(msa::AbstractMSA) -> Int
-Returns the number of columns (alignment length) in the MSA.
+
+Return the number of columns (alignment length) in the MSA.
+
+See also [`length`](@ref), [`nseqs`](@ref), [`height`](@ref).
 """
 width(msa::AbstractMSA) = length(msa)
 
 """
     height(msa::AbstractMSA) -> Int
-Returns the number of sequences (rows) in the MSA. Alias for [`nseqs`](@ref).
+
+Return the number of sequences (rows) in the MSA. Alias for [`nseqs`](@ref).
+
+See also [`nseqs`](@ref), [`width`](@ref).
 """
 height(msa::AbstractMSA) = nseqs(msa)
 
@@ -256,16 +282,16 @@ Base.lastindex(msa::AbstractMSA) = lastindex(msa, ndims(msa))
     getsequence(msa::AbstractMSA, row::Int)
     getsequence(msa::AbstractMSA, row::Int, col::Int)
 
-Get sequences or individual positions from MSA.
+Get a sequence or an individual position from an MSA.
 
-Arguments:
-- msa: The MSA
-- row: Sequence index (1-based)
-- col: Position index (1-based, optional)
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `row::Int`: Sequence index (1-based).
+- `col::Int`: Position index (1-based, optional).
 
-Returns:
-- For getsequence(msa, row): The full sequence (GappedOligo)
-- For getsequence(msa, row, col): Single character at position
+# Returns
+- For `getsequence(msa, row)`: The full sequence ([`GappedOligo`](@ref)).
+- For `getsequence(msa, row, col)`: Single character at position.
 """
 getsequence(msa::MSA, row::Int) = msa.seqs[row]
 
@@ -279,22 +305,23 @@ getsequence(msa::AbstractMSA, row::Int, col::Int) = getsequence(msa, row)[col]
 
 _is_full_height(msa::MSA) = true
 _is_full_height(msav::MSAView) = msav.rows == 1:nseqs(root(msav))
+
 """
     get_base_count(msa::AbstractMSA, pos::Int)
     get_base_count(msa::AbstractMSA, interval::UnitRange{Int})
     get_base_count(msa::AbstractMSA)
 
-Get base frequency counts from MSA.
+Get base frequency counts from an MSA.
 
-Arguments:
-- msa: The MSA
-- pos: Single position (1-based)
-- interval: Range of positions
-- none: All positions
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `pos::Int`: Single position (1-based).
+- `interval::UnitRange{Int}`: Range of positions.
+- If no position or interval is provided, returns counts for all positions.
 
-Returns:
-- Vector of 4 floats (A, C, G, T probabilities) for single position
-- Matrix view for multiple positions
+# Returns
+- A vector of 4 floats (A, C, G, T probabilities) for a single position.
+- A matrix view for multiple positions.
 """
 get_base_count(msa::MSA, pos::Int) = @view msa.base_count[:, pos]
 get_base_count(msa::MSA, interval::UnitRange{Int}) = @view msa.base_count[:, interval]
@@ -321,19 +348,19 @@ get_base_count(msav::MSAView) = get_base_count(msav, 1:length(msav))
     msadepth(msa::AbstractMSA, interval::UnitRange{Int})
     msadepth(msa::AbstractMSA)
 
-Calculate sequence depth (coverage) at positions.
+Calculate sequence depth (coverage) at positions. Depth is the sum of base probabilities, capped at 1.0.
 
-Arguments:
-- msa: The MSA
-- pos: Single position
-- interval: Range of positions
-- none: All positions
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `pos::Int`: Single position.
+- `interval::UnitRange{Int}`: Range of positions.
+- If no position or interval is provided, calculate depth for all positions.
 
-Returns:
-- Float64 for single position
-- Vector{Float64} for multiple positions
+# Returns
+- `Float64` for a single position.
+- `Vector{Float64}` for multiple positions.
 
-Depth is the sum of base probabilities, capped at 1.0.
+See also [`msadet`](@ref), [`get_base_count`](@ref).
 """
 function msadepth(msa::AbstractMSA, pos::Int)::Float64
     min(1.0, sum(get_base_count(msa, pos)))
@@ -350,19 +377,19 @@ end
     msadet(msa::AbstractMSA, interval::UnitRange{Int})
     msadet(msa::AbstractMSA)
 
-Calculate sequence determinacy (entropy inverse) at positions.
+Calculate sequence determinacy (entropy inverse) at positions. Determinacy is the maximum base frequency normalized by total coverage.
 
-Arguments:
-- msa: The MSA
-- pos: Single position
-- interval: Range of positions
-- none: All positions
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `pos::Int`: Single position.
+- `interval::UnitRange{Int}`: Range of positions.
+- If no position or interval is provided, calculate determinacy for all positions.
 
-Returns:
-- Float64 for single position (0.0 to 1.0)
-- Vector{Float64} for multiple positions
+# Returns
+- `Float64` for a single position (0.0 to 1.0).
+- `Vector{Float64}` for multiple positions.
 
-Determinacy is the maximum base frequency normalized by total coverage.
+See also [`msadepth`](@ref), [`get_base_count`](@ref).
 """
 function msadet(msa::AbstractMSA, pos::Int)::Float64
     v = get_base_count(msa, pos)
@@ -378,20 +405,20 @@ end
 
 """
     consensus_major(msa::AbstractMSA, pos::Int)
-    consensus_major(msa::AbstractMSA, interval::UnitRange{Int})
+    consensus_major(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa))
 
-Generate majority-rule consensus sequence.
+Generate a majority-rule consensus sequence using simple majority rule, ignoring gap characters.
 
-Arguments:
-- msa: The MSA
-- pos: Single position
-- interval: Range of positions (default: full alignment)
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `pos::Int`: Single position.
+- `interval::UnitRange{Int}=1:width(msa)`: Range of positions.
 
-Returns:
-- Char for single position (most common base)
-- GappedOligo for multiple positions
+# Returns
+- `Char` for a single position (most common base).
+- `GappedOligo` for multiple positions.
 
-Uses simple majority rule, ignoring gap characters.
+See also [`consensus_degen`](@ref), [`get_base_count`](@ref).
 """
 function consensus_major(msa::AbstractMSA, pos::Int)
     p = get_base_count(msa, pos)
@@ -408,21 +435,21 @@ end
 
 """
     consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)
-    consensus_degen(msa::AbstractMSA, interval::UnitRange{Int}; slack::Real=0.0)
+    consensus_degen(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa); slack::Real=0.0)
 
-Generate degenerate consensus sequence allowing ambiguity.
+Generate a degenerate consensus sequence allowing ambiguity. Bases with frequency > `slack` are included in the degeneracy.
 
-Arguments:
-- msa: The MSA
-- pos: Single position
-- interval: Range of positions (default: full alignment)
-- slack: Minimum frequency threshold for inclusion (default: 0.0)
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `pos::Int`: Single position.
+- `interval::UnitRange{Int}=1:width(msa)`: Range of positions.
+- `slack::Real=0.0`: Minimum frequency threshold for inclusion.
 
-Returns:
-- Char for single position (IUPAC ambiguity code)
-- GappedOligo for multiple positions
+# Returns
+- `Char` for a single position (IUPAC ambiguity code).
+- `GappedOligo` for multiple positions.
 
-Bases with frequency > slack are included in the degeneracy.
+See also [`consensus_major`](@ref), [`get_base_count`](@ref).
 """
 function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)::Char
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
@@ -444,17 +471,14 @@ end
 """
     dry_msa(msa::AbstractMSA; gap_content::Real=1.0)
 
-Remove columns and rows with excessive gap content.
+Remove columns and rows with excessive gap content. Columns with no non-gap characters are always removed. Rows with gap proportion > `gap_content` are removed.
 
-Arguments:
-- msa: The MSA
-- gap_content: Maximum allowed gap proportion (default: 1.0, keep all)
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `gap_content::Real=1.0`: Maximum allowed gap proportion (default: 1.0, keep all).
 
-Returns:
-- New MSA with filtered sequences and columns
-
-Columns with no non-gap characters are always removed.
-Rows with gap proportion > gap_content are removed.
+# Returns
+- A new [`MSA`](@ref) with filtered sequences and columns.
 """
 function dry_msa(msa::AbstractMSA; gap_content::Real=1.0)
     0 ≤ gap_content ≤ 1 || throw(ArgumentError("gap_content must be in [0,1]"))
@@ -485,18 +509,15 @@ end
 """
     nucleotide_diversity(msa::AbstractMSA; ignore_gaps::Bool=true, max_pairs::Int=10000)
 
-Calculate average pairwise nucleotide diversity.
+Calculate average pairwise nucleotide diversity. Uses probabilistic distance for degenerate bases. For large MSAs (>200 sequences), samples random pairs.
 
-Arguments:
-- msa: The MSA
-- ignore_gaps: Whether to skip gap-gap comparisons (default: true)
-- max_pairs: Maximum pairs to sample for large MSAs (default: 10000)
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `ignore_gaps::Bool=true`: Whether to skip gap-gap comparisons.
+- `max_pairs::Int=10000`: Maximum pairs to sample for large MSAs.
 
-Returns:
-- Float64: Average pairwise distance
-
-Uses probabilistic distance for degenerate bases.
-For large MSAs (>200 sequences), samples random pairs.
+# Returns
+- `Float64`: Average pairwise distance.
 """
 function nucleotide_diversity(msa::AbstractMSA; ignore_gaps::Bool=true, max_pairs::Int=10000)::Float64
     L = length(msa)
@@ -535,19 +556,17 @@ function nucleotide_diversity(msa::AbstractMSA; ignore_gaps::Bool=true, max_pair
 end
 
 """
-    _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool)
+    _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool=true)
 
-Calculate pairwise distance between two sequences.
+Calculate pairwise distance between two sequences using probabilistic matching for degenerate bases.
 
-Arguments:
-- msa: The MSA
-- i, j: Sequence indices
-- ignore_gaps: Whether to skip gap positions
+# Arguments
+- `msa::AbstractMSA`: The MSA.
+- `i::Int`, `j::Int`: Sequence indices.
+- `ignore_gaps::Bool=true`: Whether to skip gap positions.
 
-Returns:
-- Float64: Normalized distance (0.0 to 1.0)
-
-Uses probabilistic matching for degenerate bases.
+# Returns
+- `Float64`: Normalized distance (0.0 to 1.0).
 """
 function _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool=true)::Float64
     seq_i = getsequence(msa, i)

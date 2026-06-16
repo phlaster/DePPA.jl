@@ -7,10 +7,40 @@ using SeqFold
 using DEPPA.Oligos
 using DEPPA.Primers
 
+"""
+    SeqFold.revcomp(oligo::T) where T <: AbstractOligo -> T
 
+Return the reverse complement of an [`AbstractOligo`](@ref).
+
+Delegates to `SeqFold.revcomp` for the underlying string representation, using
+[`Oligos.DNA_COMP_TABLE_DEG`](@ref) for fast, degenerate-aware complementation.
+
+See also [`SeqFold.complement`](@ref), [`SeqFold.tm`](@ref).
+"""
 SeqFold.revcomp(oligo::T) where T <: AbstractOligo = T(SeqFold.revcomp(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG))
+
+"""
+    SeqFold.complement(oligo::T) where T <: AbstractOligo -> T
+
+Return the complement of an [`AbstractOligo`](@ref).
+
+Delegates to `SeqFold.complement` for the underlying string representation, using
+[`Oligos.DNA_COMP_TABLE_DEG`](@ref) for fast, degenerate-aware complementation.
+
+See also [`SeqFold.revcomp`](@ref).
+"""
 SeqFold.complement(oligo::T) where T <: AbstractOligo = T(SeqFold.complement(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG))
 
+"""
+    SeqFold.gc_content(oligo::AbstractOligo) -> Float64
+
+Calculate the GC content of an [`AbstractOligo`](@ref) as a fraction between 0.0 and 1.0.
+
+For gapped oligomers, delegate to the parent sequence. For degenerate bases, use the
+expected GC content from [`Oligos.IUPAC_GC_CONTENT`](@ref).
+
+See also [`SeqFold.gc_cache`](@ref).
+"""
 function SeqFold.gc_content(oligo::AbstractOligo)::Float64
     hasgaps(oligo) && return SeqFold.gc_content(parent(oligo))
     isempty(oligo) && return NaN
@@ -18,6 +48,11 @@ function SeqFold.gc_content(oligo::AbstractOligo)::Float64
     return total_gc / length(oligo)
 end
 
+"""
+    logsumexp(x::Vector{T}) -> T
+
+Compute the logarithm of the sum of exponentials of the elements in `x` in a numerically stable way.
+"""
 function logsumexp(x::Vector{T}) where T
     m = maximum(x)
     isinf(m) && return m
@@ -25,6 +60,26 @@ function logsumexp(x::Vector{T}) where T
     return m + log(s)
 end
 
+"""
+    SeqFold.dg(oligo::AbstractOligo; temp::Real=37.0, max_samples::Int=1000, mode::Symbol=:average) -> Float64
+
+Compute the minimum free energy (ΔG, kcal/mol⁻¹) of an [`AbstractOligo`](@ref) at a specified temperature.
+
+For degenerate oligomers, calculate the free energy by sampling or enumerating all unique
+non-degenerate variants.
+
+# Arguments
+- `oligo::AbstractOligo`: The oligomer to fold.
+- `temp::Real=37.0`: The temperature (°C) at which to perform the folding.
+- `max_samples::Int=1000`: Maximum number of variants to sample if the total number exceeds this limit.
+- `mode::Symbol=:average`: Calculation mode. `:average` computes the Boltzmann-weighted average ΔG,
+  while `:worstcase` computes the minimum (most negative) ΔG among the sampled variants.
+
+# Returns
+- `Float64`: The calculated free energy (ΔG) in kcal/mol⁻¹, rounded to two decimal places.
+
+See also [`SeqFold.fold`](@ref), [`SeqFold.tm`](@ref), [`Oligos.unfolded_proportion`](@ref).
+"""
 function SeqFold.dg(oligo::AbstractOligo; temp::Real=37.0, max_samples::Int=1000, mode::Symbol=:average)::Float64
     hasgaps(oligo) && error("Folding not supported for gapped sequences")
     isempty(oligo) && return NaN
@@ -69,10 +124,42 @@ function SeqFold.dg(oligo::AbstractOligo; temp::Real=37.0, max_samples::Int=1000
     return round(ΔGs, digits=2)
 end
 
+"""
+    SeqFold.dg_cache(oligo::AbstractOligo; temp::Real=37.0) -> Matrix{Float64}
+
+Compute a matrix of free energy values for all possible subsequences of an [`AbstractOligo`](@ref).
+
+Delegates to `SeqFold.dg_cache` for the underlying non-degenerate, ungapped string representation.
+Gapped sequences are not supported.
+
+See also [`SeqFold.dg`](@ref), [`SeqFold.tm_cache`](@ref).
+"""
 function SeqFold.dg_cache(oligo::AbstractOligo; temp::Real=37.0)::Matrix{Float64}
     hasgaps(oligo) && error("Free energy cache not supported for gapped sequences")
     return SeqFold.dg_cache(String(Oligo(oligo)); temp=temp)
 end
+
+"""
+    SeqFold.tm(oligo1::AbstractOligo, oligo2::AbstractOligo; conditions=:pcr, conf_int::Real=0.8, max_samples::Int=1000, kwargs...) -> NamedTuple
+
+Calculate the melting temperature (Tm, °C) for the duplex formation of two [`AbstractOligo`](@ref) sequences.
+
+For degenerate oligomers, calculate the Tm by sampling or enumerating all unique non-degenerate
+variant pairs. Returns a `NamedTuple` containing the mean Tm, confidence interval, and absolute min/max bounds.
+
+# Arguments
+- `oligo1::AbstractOligo`: The first DNA sequence.
+- `oligo2::AbstractOligo`: The second DNA sequence, must be the same length as `oligo1`.
+- `conditions=:pcr`: Buffer conditions specification (see `SeqFold.tm`).
+- `conf_int::Real=0.8`: Confidence interval for the Tm distribution (0.0, 1.0].
+- `max_samples::Int=1000`: Maximum number of variant pairs to sample if the total combinations exceed this limit.
+- `kwargs...`: Additional parameters to override preset conditions.
+
+# Returns
+- `NamedTuple`: `(mean=Float64, conf=Tuple{Float64, Float64}, min=Float64, max=Float64)`.
+
+See also [`SeqFold.tm`](@ref), [`SeqFold.dg`](@ref).
+"""
 function SeqFold.tm(
     oligo1::AbstractOligo,
     oligo2::AbstractOligo; 
@@ -133,6 +220,16 @@ function SeqFold.tm(
         max = Tm_max
     )
 end
+
+"""
+    SeqFold.tm(oligo::AbstractOligo; conditions=:pcr, conf_int::Real=0.9, max_samples::Int=1000, kwargs...) -> NamedTuple
+
+Calculate the melting temperature (Tm, °C) for the self-complementary duplex formation of an [`AbstractOligo`](@ref).
+
+Matches the sequence with its exact complement. See [`SeqFold.tm`](@ref) for details on arguments and return values.
+
+See also [`SeqFold.tm`](@ref), [`SeqFold.complement`](@ref).
+"""
 SeqFold.tm(
     oligo::AbstractOligo;
     
@@ -142,10 +239,28 @@ SeqFold.tm(
     kwargs...
 ) = SeqFold.tm(oligo, SeqFold.complement(oligo); conditions=conditions, conf_int=conf_int, max_samples=max_samples, kwargs...)
 
+"""
+    SeqFold.tm_cache(oligo1::AbstractOligo, oligo2::AbstractOligo; conditions=:pcr, kwargs...) -> Matrix{Float64}
+
+Compute a matrix of melting temperatures for all possible subsequences of an [`AbstractOligo`](@ref) pair.
+
+Delegates to `SeqFold.tm_cache` for the underlying non-degenerate, ungapped string representation.
+Gapped sequences are not supported.
+
+See also [`SeqFold.tm_cache`](@ref), [`SeqFold.tm`](@ref).
+"""
 function SeqFold.tm_cache(oligo1::AbstractOligo, oligo2::AbstractOligo; conditions=:pcr, kwargs...)::Matrix{Float64}
     (hasgaps(oligo1) || hasgaps(oligo2)) && error("Melting temperature cache not supported for gapped sequences")
     SeqFold.tm_cache(String(Oligo(oligo1)), String(Oligo(oligo2)); conditions=conditions, kwargs...)
 end
+
+"""
+    SeqFold.tm_cache(oligo::AbstractOligo; conditions=:pcr, kwargs...) -> Matrix{Float64}
+
+Compute a matrix of melting temperatures for all possible subsequences of an [`AbstractOligo`](@ref) matched with its complement.
+
+See also [`SeqFold.tm_cache`](@ref), [`SeqFold.complement`](@ref).
+"""
 SeqFold.tm_cache(
     oligo::AbstractOligo;
     
@@ -153,17 +268,76 @@ SeqFold.tm_cache(
     kwargs...
 )::Matrix{Float64} = SeqFold.tm_cache(oligo, SeqFold.complement(oligo); conditions=conditions, kwargs...)
 
+"""
+    SeqFold.dot_bracket(oligo::AbstractOligo, structs::Vector{SeqFold.Structure}) -> String
+
+Generate the dot-bracket notation representation of a predicted nucleic acid secondary structure for an [`AbstractOligo`](@ref).
+
+Delegates to `SeqFold.dot_bracket` for the underlying string representation.
+
+See also [`SeqFold.dot_bracket`](@ref), [`SeqFold.fold`](@ref).
+"""
 SeqFold.dot_bracket(
     oligo::AbstractOligo, structs::Vector{SeqFold.Structure}
 ) = SeqFold.dot_bracket(String(Oligo(oligo)), structs)
 
+"""
+    SeqFold.gc_cache(oligo::AbstractOligo) -> Matrix{Float64}
+
+Compute a matrix of GC scores for all possible subsequences of an [`AbstractOligo`](@ref).
+
+Delegates to `SeqFold.gc_cache` for the underlying non-degenerate string representation.
+
+See also [`SeqFold.gc_cache`](@ref), [`SeqFold.gc_content`](@ref).
+"""
 SeqFold.gc_cache(oligo::AbstractOligo)::Matrix{Float64} = SeqFold.gc_cache(String(Oligo(oligo)))
 
 
+"""
+    SeqFold.tm(primer::AbstractPrimer) -> NamedTuple
+
+Return the precomputed melting temperature (Tm) statistics stored in an [`AbstractPrimer`](@ref).
+
+See also [`SeqFold.dg`](@ref), [`SeqFold.gc_content`](@ref).
+"""
 SeqFold.tm(primer::AbstractPrimer) = primer.tm
+
+"""
+    SeqFold.dg(primer::AbstractPrimer) -> Float64
+
+Return the precomputed minimum free energy (ΔG) stored in an [`AbstractPrimer`](@ref).
+
+See also [`SeqFold.tm`](@ref), [`SeqFold.gc_content`](@ref).
+"""
 SeqFold.dg(primer::AbstractPrimer) = primer.dg
+
+"""
+    SeqFold.gc_content(primer::AbstractPrimer) -> Float64
+
+Return the precomputed GC content stored in an [`AbstractPrimer`](@ref).
+
+See also [`SeqFold.tm`](@ref), [`SeqFold.dg`](@ref).
+"""
 SeqFold.gc_content(primer::AbstractPrimer) = primer.gc
 
+"""
+    Oligos.unfolded_proportion(oligo::AbstractOligo; temp::Real, max_samples::Int) -> Float64
+
+Calculate the expected proportion of the oligomer population that remains unfolded (single-stranded) at a given temperature.
+
+For degenerate oligomers, calculate the unfolded fraction by sampling or enumerating all unique
+non-degenerate variants and averaging their individual unfolded probabilities based on their ΔG.
+
+# Arguments
+- `oligo::AbstractOligo`: The oligomer to evaluate.
+- `temp::Real`: The temperature (°C) at which to evaluate the folding equilibrium.
+- `max_samples::Int`: Maximum number of variants to sample if the total number exceeds this limit.
+
+# Returns
+- `Float64`: The unfolded proportion, clamped between 0.0 and 1.0.
+
+See also [`SeqFold.dg`](@ref), [`Oligos.sampleNondeg`](@ref).
+"""
 function Oligos.unfolded_proportion(oligo; temp, max_samples)
     hasgaps(oligo) && error("Folding not supported for gapped sequences")
     isempty(oligo) && return NaN
@@ -198,15 +372,51 @@ function Oligos.unfolded_proportion(oligo; temp, max_samples)
     end
     return clamp(avg_unfolded, 0.0, 1.0)
 end
+
+"""
+    Primers._ext_revcomp(o::AbstractOligo)
+
+Compute the reverse complement of an [`AbstractOligo`](@ref) using `SeqFold`.
+
+This is an internal extension hook used by the `Primers` module to dynamically load
+thermodynamic calculations without creating a hard dependency on `SeqFold`.
+"""
 function Primers._ext_revcomp(o::AbstractOligo)
     SeqFold.revcomp(o)
 end
+
+"""
+    Primers._ext_tm(oligo::AbstractOligo; max_samples, conf_int, conditions)
+
+Calculate the melting temperature (Tm) of an [`AbstractOligo`](@ref) using `SeqFold`.
+
+This is an internal extension hook used by the `Primers` module to dynamically load
+thermodynamic calculations without creating a hard dependency on `SeqFold`.
+"""
 function Primers._ext_tm(oligo::AbstractOligo; max_samples, conf_int, conditions)
     SeqFold.tm(oligo; max_samples=max_samples, conf_int=conf_int, conditions=conditions)
 end
+
+"""
+    Primers._ext_dg(oligo::AbstractOligo; max_samples, temp)
+
+Compute the minimum free energy (ΔG) of an [`AbstractOligo`](@ref) using `SeqFold`.
+
+This is an internal extension hook used by the `Primers` module to dynamically load
+thermodynamic calculations without creating a hard dependency on `SeqFold`.
+"""
 function Primers._ext_dg(oligo::AbstractOligo; max_samples, temp)
     SeqFold.dg(oligo; max_samples=max_samples, temp=temp)
 end
+
+"""
+    Primers._ext_gc_content(oligo::AbstractOligo)
+
+Calculate the GC content of an [`AbstractOligo`](@ref) using `SeqFold`.
+
+This is an internal extension hook used by the `Primers` module to dynamically load
+thermodynamic calculations without creating a hard dependency on `SeqFold`.
+"""
 function Primers._ext_gc_content(oligo::AbstractOligo)
     SeqFold.gc_content(oligo)
 end
