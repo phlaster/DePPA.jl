@@ -14,7 +14,7 @@ export unfolded_proportion
 """
     AbstractOligo <: AbstractString
 
-Represent the abstract supertype for all oligomer types in DEPPA.
+Represent the abstract supertype for all oligomer types in DePPA.
 """
 abstract type AbstractOligo <: AbstractString end
 

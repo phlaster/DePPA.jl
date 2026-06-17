@@ -1,7 +1,7 @@
 using Test
-using DEPPA.Primers
-using DEPPA.Alignments
-using DEPPA.Oligos
+using DePPA.Primers
+using DePPA.Alignments
+using DePPA.Oligos
 using SeqFold
 
 @testset "Primers Tests" begin

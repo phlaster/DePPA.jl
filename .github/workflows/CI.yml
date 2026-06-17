@@ -69,6 +69,6 @@ jobs:
         shell: julia --project=docs --color=yes {0}
         run: |
           using Documenter: DocMeta, doctest
-          using DEPPA
-          DocMeta.setdocmeta!(DEPPA, :DocTestSetup, :(using DEPPA); recursive=true)
-          doctest(DEPPA)
+          using DePPA
+          DocMeta.setdocmeta!(DePPA, :DocTestSetup, :(using DePPA); recursive=true)
+          doctest(DePPA)

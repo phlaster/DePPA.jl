@@ -4,8 +4,8 @@ using Statistics
 
 using SeqFold
 
-using DEPPA.Oligos
-using DEPPA.Primers
+using DePPA.Oligos
+using DePPA.Primers
 
 """
     SeqFold.revcomp(oligo::T) where T <: AbstractOligo -> T

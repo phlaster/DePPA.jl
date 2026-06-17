@@ -3,17 +3,17 @@ using Aqua
 using JET
 using Random
 
-using DEPPA
-using DEPPA.Oligos
-using DEPPA.Alignments
-using DEPPA.Primers
+using DePPA
+using DePPA.Oligos
+using DePPA.Alignments
+using DePPA.Primers
 
 Random.seed!(42)
 
-@testset verbose=true failfast=true "DEPPA.jl"  begin
+@testset verbose=true failfast=true "DePPA.jl"  begin
     # Passing
-    @testset "Code quality (Aqua.jl)" Aqua.test_all(DEPPA)
-    @testset "Code linting (JET.jl)" JET.test_package(DEPPA; target_modules=(DEPPA,))
+    @testset "Code quality (Aqua.jl)" Aqua.test_all(DePPA)
+    @testset "Code linting (JET.jl)" JET.test_package(DePPA; target_modules=(DePPA,))
     @testset "Oligos" include("test_oligos.jl")
     @testset "Alignments" include("test_alignments.jl")
     @testset "Primers" include("test_primers.jl")

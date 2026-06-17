@@ -1,6 +1,6 @@
 using Test
-using DEPPA.Alignments
-using DEPPA.Oligos
+using DePPA.Alignments
+using DePPA.Oligos
 using Random
 
 @testset "Alignments Tests" begin
@@ -221,11 +221,11 @@ using Random
 
         # With gaps, ignore_gaps=true
         msa_gap = MSA(["ACGT", "A-GT"])
-        @test DEPPA.Alignments._pairwise_distance(msa_gap, 1, 2; ignore_gaps=true) ≈ 0.0
+        @test DePPA.Alignments._pairwise_distance(msa_gap, 1, 2; ignore_gaps=true) ≈ 0.0
         @test nucleotide_diversity(msa_gap; ignore_gaps=true) ≈ 0.0
 
         # With gaps, ignore_gaps=false
-        @test DEPPA.Alignments._pairwise_distance(msa_gap, 1, 2; ignore_gaps=false) ≈ 0.25
+        @test DePPA.Alignments._pairwise_distance(msa_gap, 1, 2; ignore_gaps=false) ≈ 0.25
         @test nucleotide_diversity(msa_gap; ignore_gaps=false) ≈ 0.25
 
         # Degenerate bases

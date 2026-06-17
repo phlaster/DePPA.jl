@@ -1,20 +1,20 @@
-# <div align="center"> <img src="docs/src/assets/logo.png" alt="DEPPA.jl: DEgenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
+# <div align="center"> <img src="docs/src/assets/logo.png" alt="DePPA.jl: DEgenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://phlaster.github.io/DEPPA.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://phlaster.github.io/DEPPA.jl/dev/)
-[![Build Status](https://github.com/phlaster/DEPPA.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/phlaster/DEPPA.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://phlaster.github.io/DePPA.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://phlaster.github.io/DePPA.jl/dev/)
+[![Build Status](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
-[![codecov](https://codecov.io/gh/phlaster/DEPPA.jl/graph/badge.svg?token=DCH8TMMXOA)](https://codecov.io/gh/phlaster/DEPPA.jl)
+[![codecov](https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA)](https://codecov.io/gh/phlaster/DePPA.jl)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ## Introduction
 
-`DEPPA.jl` is a high-performance pure Julia package for multiple sequence alignment (MSA) analysis and PCR primer design. The package is specifically engineered to handle degenerate (IUPAC) nucleotide sequences and provides rigorous statistical calculations for the thermodynamic properties of primer pools.
+`DePPA.jl` is a high-performance pure Julia package for multiple sequence alignment (MSA) analysis and PCR primer design. The package is specifically engineered to handle degenerate (IUPAC) nucleotide sequences and provides rigorous statistical calculations for the thermodynamic properties of primer pools.
 
 ## Motivation
 
 Standard bioinformatics tools often treat degenerate positions by selecting a consensus base or calculating thermodynamics for a single "average" sequence. Biophysically, however, a degenerate primer is a mixture of distinct oligonucleotides, each with its own unique $T_m$ and $\Delta G$. 
 
-`DEPPA.jl` addresses this by treating degenerate primers as statistical ensembles. Instead of a single point estimate, the package calculates the thermodynamic distribution of the primer pool. This allows researchers to quantitatively assess and mitigate amplification bias before entering the laboratory.
+`DePPA.jl` addresses this by treating degenerate primers as statistical ensembles. Instead of a single point estimate, the package calculates the thermodynamic distribution of the primer pool. This allows researchers to quantitatively assess and mitigate amplification bias before entering the laboratory.
 
 ## Key Features
 
@@ -27,7 +27,7 @@ Standard bioinformatics tools often treat degenerate positions by selecting a co
 
 While several tools exist for PCR primer design, they often differ significantly in their handling of degenerate sequences, licensing models, and integration capabilities. 
 
-Below is a factual comparison of `DEPPA.jl` against standard open-source libraries, free tools, and commercial suites.
+Below is a factual comparison of `DePPA.jl` against standard open-source libraries, free tools, and commercial suites.
 
 | Package | Degenerate Primer Design | License | Ecosystem & Integration | API & Documentation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -35,19 +35,19 @@ Below is a factual comparison of `DEPPA.jl` against standard open-source librari
 | **OpenPrimeR** | Specialized for degenerate pools. | GPL | R-only; difficult external integration. | Shiny GUI focused; secondary API. |
 | **Geneious Prime** | GUI-based; native IUPAC support. | Commercial | Closed Java plugin; paid license. | GUI-centric; secondary API. |
 | **CLC Genomics** | GUI-based; native IUPAC support. | Commercial | Closed ecosystem; limited scripting. | GUI-centric; manual-driven. |
-| **DEPPA.jl** | Native ensemble thermodynamics; statistical distributions. | MIT | Native Julia; seamless Python interop. | Modern, type-stable API; inline docs. |
+| **DePPA.jl** | Native ensemble thermodynamics; statistical distributions. | MIT | Native Julia; seamless Python interop. | Modern, type-stable API; inline docs. |
 
 ## Installation
 
-To use the core alignment and sequence features, install `DEPPA.jl`:
+To use the core alignment and sequence features, install `DePPA.jl`:
 ```julia
 julia> ]
 
-pkg> add DEPPA
+pkg> add DePPA
 pkg> add MAFFT_jll # in-place multiple sequence alignment requires the engine
 pkg> add SeqFold # enable thermodynamic calculations for primer design
 
-julia> using DEPPA.Alignments, DEPPA.Primers
+julia> using DePPA.Alignments, DePPA.Primers
 julia> using SeqFold, MAFFT_jll
 julia> setMSAShowStyle!(:bw); # monochrome REPL output theme, also try `:polymorf` or `:allcolors`
 ```
@@ -140,21 +140,21 @@ Tm: 55.8±0.1 °C
 
 ## Thermodynamic Engine and Extensions
 
-`DEPPA.jl` utilizes Julia's native package extension system. The computational lifting for nearest-neighbor thermodynamics is offloaded to `SeqFold.jl`. 
+`DePPA.jl` utilizes Julia's native package extension system. The computational lifting for nearest-neighbor thermodynamics is offloaded to `SeqFold.jl`. 
 
 When you call functions like `SeqFold.tm(primer)` or `construct_primers(...)`, the `SeqFoldExt` module intercepts these calls. It expands the degenerate primer into its non-degenerate variants, calculates the thermodynamics for each variant independently, and aggregates the results into a statistical distribution.
 
-If `SeqFold.jl` is not installed in your environment, the core `DEPPA` modules will still load and function perfectly for sequence parsing and MSA manipulation, but thermodynamic functions will throw an informative error prompting you to install the extension.
+If `SeqFold.jl` is not installed in your environment, the core `DePPA` modules will still load and function perfectly for sequence parsing and MSA manipulation, but thermodynamic functions will throw an informative error prompting you to install the extension.
 
 ## Architecture and Performance
 
-Designed for modern multi-core systems, `DEPPA.jl` leverages Julia's native multithreading for computationally intensive tasks such as MSA scanning, primer candidate generation, and Monte Carlo sampling of large degenerate pools. 
+Designed for modern multi-core systems, `DePPA.jl` leverages Julia's native multithreading for computationally intensive tasks such as MSA scanning, primer candidate generation, and Monte Carlo sampling of large degenerate pools. 
 
 The use of `OligoView` and `MSAView` ensures that slicing and subsetting operations are strictly $O(1)$ memory operations, allowing the package to handle massive metagenomic alignments without triggering garbage collection bottlenecks.
 
 ## Calling from Python
 
-`DEPPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
+`DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
 Install the bridge via your preferred Python package manager:
 ```bash
@@ -168,8 +168,8 @@ In your Python script or REPL:
 Python 3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> from juliacall import Main as jl
->>> jl.seval("""using Pkg; Pkg.add(url="https://github.com/phlaster/DEPPA.jl"); Pkg.add("SeqFold")""")
->>> jl.seval("using DEPPA.Oligos, SeqFold")
+>>> jl.seval("""using Pkg; Pkg.add(url="https://github.com/phlaster/DePPA.jl"); Pkg.add("SeqFold")""")
+>>> jl.seval("using DePPA.Oligos, SeqFold")
 # Define convenient wrapper
 >>> jl.seval('calc_tm(seq::String) = tm(DegenOligo(seq))')
 # Call as a Python function
@@ -182,15 +182,15 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 
 ## Citation
 
-If you use `DEPPA.jl` in your research, please cite:
+If you use `DePPA.jl` in your research, please cite:
 
 ```bibtex
-@misc{DEPPA.jl,
+@misc{DePPA.jl,
   author       = {A.D. Bezlepsky},
-  title        = {{DEPPA.jl: DEgenerate Primer Pair Assembler}},
+  title        = {{DePPA.jl: DEgenerate Primer Pair Assembler}},
   year         = {2026},
   publisher    = {GitHub},
   journal      = {GitHub repository},
-  howpublished = {\url{https://github.com/phlaster/DEPPA.jl}},
+  howpublished = {\url{https://github.com/phlaster/DePPA.jl}},
 }
 ```

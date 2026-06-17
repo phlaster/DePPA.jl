@@ -4,11 +4,11 @@ using NCBIBlast
 using FastaIO
 using ProgressMeter
 
-using DEPPA.Alignments
-using DEPPA.Oligos  
-using DEPPA.Primers
+using DePPA.Alignments
+using DePPA.Oligos  
+using DePPA.Primers
 
-import DEPPA.Primers: construct_primers
+import DePPA.Primers: construct_primers
 
 
 # function construct_primers(

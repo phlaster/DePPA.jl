@@ -1,13 +1,13 @@
-module DEPPA
+module DePPA
 
 """
-    Package DEPPA
+    Package DePPA
 
 Nucleic acid oligomers aligning and PCR primers construction
 
-$(isnothing(get(ENV, "CI", nothing)) ? ("\nPackage local path: $(pathof(DEPPA))") : "") 
+$(isnothing(get(ENV, "CI", nothing)) ? ("\nPackage local path: $(pathof(DePPA))") : "") 
 """
-DEPPA
+DePPA
 
 export Oligos, Primers, Alignments
 

@@ -1,16 +1,16 @@
-using DEPPA
-using DEPPA.Oligos
-using DEPPA.Alignments
-using DEPPA.Primers
+using DePPA
+using DePPA.Oligos
+using DePPA.Alignments
+using DePPA.Primers
 
 using Documenter
 
-DocMeta.setdocmeta!(DEPPA, :DocTestSetup, :(using DEPPA); recursive=true)
+DocMeta.setdocmeta!(DePPA, :DocTestSetup, :(using DePPA); recursive=true)
 
 makedocs(;
-    modules=[DEPPA, DEPPA.Oligos, DEPPA.Alignments, DEPPA.Primers],
+    modules=[DePPA, DePPA.Oligos, DePPA.Alignments, DePPA.Primers],
     authors="phlaster <phlaster@users.noreply.github.com>",
-    sitename="DEPPA.jl",
+    sitename="DePPA.jl",
     format=Documenter.HTML(;
         edit_link="master",
         assets=String[],
@@ -23,7 +23,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/phlaster/DEPPA.jl",
+    repo="github.com/phlaster/DePPA.jl",
     devbranch="master",
     push_preview=true
 )

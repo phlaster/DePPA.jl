@@ -1,4 +1,4 @@
-using DEPPA, MAFFT_jll, SeqFold
+using DePPA, MAFFT_jll, SeqFold
 
 Random.seed!(123)
 
