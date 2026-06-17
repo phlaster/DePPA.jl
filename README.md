@@ -38,17 +38,21 @@ Below is a factual comparison of `DEPPA.jl` against standard open-source librari
 To use the core alignment and sequence features, install `DEPPA.jl`:
 ```julia
 julia> ]
+
 pkg> add DEPPA
 pkg> add MAFFT_jll # in-place multiple sequence alignment requires the engine
 pkg> add SeqFold # enable thermodynamic calculations for primer design
+
 julia> using DEPPA.Alignments, DEPPA.Primers
 julia> using SeqFold, MAFFT_jll
-julia> setMSAShowStyle!(:bw); # monochrome REPL output, also try `:polymorf` or `:allcolors`
+julia> setMSAShowStyle!(:bw); # monochrome REPL output theme, also try `:polymorf` or `:allcolors`
 ```
 
 ## Basic Usage
 
 ### Quickstart
+
+First, we define a small set of unaligned sequences in memory and write them to a temporary FASTA file.
 
 ```julia
 julia> data = """>1
@@ -68,17 +72,25 @@ julia> data = """>1
               CCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA""";
 
 julia> temp_file = tempname(); open(temp_file, "w") do f write(f, data) end;
+```
 
+Next, we construct an `MSA` object. Passing `mafft=true` triggers the MAFFT engine (via `MAFFT_jll`) to align the sequences in-place. The terminal output automatically displays a truncated view with a consensus track.
+
+```julia
 julia> alignment = MSA(temp_file; mafft=true)
 MSA with 5 sequences of length 101:
-   -ATTTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCT…
+   -ATTTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAA…
 1 >G..C.....T.................C....................C..........................…
 2 >C.....C........T...........C...C.C.....G..............T.....A........T.....…
 3 >C..............T...........T...C.C....................T.....A........C.....…
 4 >.--C.................T....................T................................…
 5 >.---.................T....................T................................…
    1        ⋅         ⋅         ⋅         ⋅         ⋅         ⋅         ⋅   75
+```
 
+Now we generate candidate primers. The `construct_primers` function scans the alignment, filtering candidates based on reasonable defaults for $GC$ content, $T_m$, and $\Delta G$ distributions, and returns a list of valid primers. We do this for both forward (`is_forward=true`) and reverse (`is_forward=false`) primers.
+
+```julia
 julia> fwd = construct_primers(alignment); first(fwd)
 Constructing F... 100%|██████████| Time: 0:00:01
 Forward degenerate primer with 2 deg. positions
@@ -108,7 +120,11 @@ Reverse degenerate primer with 2 deg. positions
   Min ΔG: 1.14 kcal/mol
   GC content: 58.8%
   Description: "Reverse complement of Degenerate consensus for 5 seq MSA"
+```
 
+Finally, we pair the forward and reverse primers. `best_pairs` matches primers based on the desired amplicon length and $T_m$ compatibility, returning the best combinations sorted by the smallest $T_m$ difference.
+
+```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
 PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
               >_________________51bp_________________<                             
@@ -153,9 +169,9 @@ Type "help", "copyright", "credits" or "license" for more information.
 # Define convenient wrapper
 >>> jl.seval('calc_tm(seq::String) = tm(DegenOligo(seq))')
 # Call as a Python function
->>> result = jl.calc_tm("GCTTDYRTA")
+>>> result = jl.calc_tm("AGACYGACCGHGAAYTMGACCT")
 >>> print(f"Mean Tm: {result.mean}, Confidence: {result.conf}")
-Mean Tm: -16.3, Confidence: (-57.7, 19.5)
+Mean Tm: 55.7, Confidence: (44.2, 65.6)
 ```
 
 *Note: As with any Julia-Python bridge, the first function call will incur a one-time latency due to Julia's JIT compilation. Subsequent calls will execute at native speeds.*
