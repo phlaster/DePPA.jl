@@ -262,7 +262,7 @@ function Base.checkbounds(::AbstractMSA, ::Colon, ::Colon) end
 
 Return the number of sequences (rows) in the alignment.
 
-See also [`height`](@ref), [`width`](@ref), [`length`](@ref).
+See also [`height`](@ref), [`width`](@ref).
 """
 nseqs(msa::MSA) = length(msa.seqs)
 nseqs(v::MSAView) = length(v.rows)
@@ -275,7 +275,7 @@ Base.length(v::MSAView) = length(v.cols)
 
 Return the number of columns (alignment length) in the MSA.
 
-See also [`length`](@ref), [`nseqs`](@ref), [`height`](@ref).
+See also [`nseqs`](@ref), [`height`](@ref).
 """
 width(msa::AbstractMSA) = length(msa)
 
