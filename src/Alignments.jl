@@ -93,7 +93,8 @@ end
 
 """
     MSAView <: AbstractMSA
-A lightweight view into an `MSA`, representing a submatrix of rows and columns.
+
+A lightweight view into an [`MSA`](@ref), representing a submatrix of rows and columns.
 """
 struct MSAView <: AbstractMSA
     parent::AbstractMSA
@@ -101,15 +102,6 @@ struct MSAView <: AbstractMSA
     cols::UnitRange{Int}
 end
 
-"""
-    MSAView <: AbstractMSA
-
-A lightweight view into an [`MSA`](@ref), representing a submatrix of rows and columns.
-"""
-function MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
-    seqs = [getsequence(msav, i) for i in 1:nseqs(msav)]
-    return MSA(seqs; bootstrap=bootstrap, seed=seed)
-end
 
 _returnrows(m::AbstractMSA) = m
 _returnrows(m::MSAView) = MSAView(m.parent, 1:height(m.parent), m.cols)
@@ -149,7 +141,7 @@ Construct an MSA from a FASTA file.
 # Arguments
 - `predicate::Function`: A function that takes the sequence description and returns `true` to include the sequence.
 - `fasta::AbstractString`: Path to the FASTA file.
-- `mafft::Bool=false`: If `true`, align the sequences using MAFFT (requires `MAFFT_jll` to be loaded).
+- `mafft::Bool=false`: If `true`, align the sequences using MAFFT (requires `MAFFT_jll` package to be loaded).
 - `bootstrap::Int=0`: Number of bootstrap iterations for base frequencies.
 - `seed=nothing`: Random seed for reproducibility.
 """
@@ -181,7 +173,43 @@ function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, boot
     gapped_oligos = [GappedOligo(seq, desc) for (desc, seq) in fasta_content]
     return MSA(gapped_oligos; bootstrap=bootstrap, seed=seed)
 end
+
+"""
+    MSA(fasta::AbstractString; kwargs...)
+
+Construct an `MSA` from a FASTA file, including all sequences.
+
+This is a convenience method that delegates to the predicate-based constructor with a filter that always returns `true`.
+
+# Arguments
+- `fasta::AbstractString`: Path to the FASTA file.
+- `kwargs...`: Keyword arguments passed to the underlying `MSA(predicate, fasta; kwargs...)` constructor (e.g., `mafft::Bool`, `bootstrap::Int`, `seed`).
+
+# Returns
+- `MSA`: A new `MSA` object containing all sequences from the file.
+
+"""
 MSA(fasta::AbstractString; kwargs...) = MSA(x->true, fasta; kwargs...)
+
+"""
+    MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
+
+Construct a new concrete `MSA` by materializing the sliced rows and columns from an `MSAView` into a standalone alignment.
+
+# Arguments
+- `msav::MSAView`: The MSA view to materialize.
+- `bootstrap::Int=0`: Number of bootstrap iterations for computing base frequencies.
+- `seed=nothing`: Random seed for reproducibility during bootstrap resampling.
+
+# Returns
+- `MSA`: A new, independent `MSA` object containing the sliced sequences.
+
+See also [`MSAView`](@ref).
+"""
+function MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
+    seqs = [getsequence(msav, i) for i in 1:nseqs(msav)]
+    return MSA(seqs; bootstrap=bootstrap, seed=seed)
+end
 
 """
     getindex(msa::AbstractMSA, rows, cols)
