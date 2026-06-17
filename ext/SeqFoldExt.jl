@@ -17,7 +17,7 @@ Delegates to `SeqFold.revcomp` for the underlying string representation, using
 
 See also [`SeqFold.complement`](@ref), [`SeqFold.tm`](@ref).
 """
-SeqFold.revcomp(oligo::T) where T <: AbstractOligo = T(SeqFold.revcomp(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG))
+SeqFold.revcomp(oligo::T) where T <: AbstractOligo = T(SeqFold.revcomp(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG), "Reverse complement of " * description(oligo))
 
 """
     SeqFold.complement(oligo::T) where T <: AbstractOligo -> T
@@ -29,7 +29,7 @@ Delegates to `SeqFold.complement` for the underlying string representation, usin
 
 See also [`SeqFold.revcomp`](@ref).
 """
-SeqFold.complement(oligo::T) where T <: AbstractOligo = T(SeqFold.complement(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG))
+SeqFold.complement(oligo::T) where T <: AbstractOligo = T(SeqFold.complement(String(oligo); table=Oligos.DNA_COMP_TABLE_DEG), "Complement of " * description(oligo))
 
 """
     SeqFold.gc_content(oligo::AbstractOligo) -> Float64
