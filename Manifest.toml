@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "59ab93048b962955d108d1d8c31758bfefd5d585"
+project_hash = "49642a481455c2c2a676b97b22d4561a842860db"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -17,7 +17,7 @@ version = "1.3.0+1"
 deps = ["FastaIO", "ProgressMeter", "Random", "Statistics"]
 path = "."
 uuid = "47e0b4c3-c02b-4df9-862c-39042bcbb8d1"
-version = "0.0.1"
+version = "0.1.0"
 
     [deps.DePPA.extensions]
     BLASTExt = "NCBIBlast"
