@@ -144,6 +144,15 @@ function Base.show(io::IO, msa::AbstractMSA)
             end
         end
     end
+
+    if needs_width_ellipsis
+        if style == :allcolors || style == :polymorf
+            printstyled(io, "…"; color=:light_black, reverse=true)
+        else
+            print(io, "…")
+        end
+    end
+
     println(io)
 
     # Print the sequences
@@ -174,9 +183,9 @@ function Base.show(io::IO, msa::AbstractMSA)
         
         if needs_width_ellipsis
             if style == :allcolors || style == :polymorf
-                printstyled(io, "⋅⋅⋅"; color=:light_black, reverse=true)
+                printstyled(io, "…"; color=:light_black, reverse=true)
             else
-                print(io, "⋅⋅⋅")
+                print(io, "…")
             end
         end
         println(io)
@@ -224,5 +233,7 @@ function Base.show(io::IO, msa::AbstractMSA)
             num_line_chars[rel_idx] = '#'
         end
     end
+    
+    needs_width_ellipsis && print(io, " ")
     print(io, String(num_line_chars))
 end
