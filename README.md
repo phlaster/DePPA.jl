@@ -1,4 +1,4 @@
-# <div align="center"> <img src="docs/src/assets/logo.png" alt="DePPA.jl: DEgenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
+# <div align="center"> <img src="docs/src/assets/logo.png" alt="DePPA.jl: Degenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://phlaster.github.io/DePPA.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://phlaster.github.io/DePPA.jl/dev/)
@@ -9,56 +9,96 @@
 
 ## Introduction
 
-`DePPA.jl` is a high-performance pure Julia package for multiple sequence alignment (MSA) analysis and PCR primer design. The package is specifically engineered to handle degenerate (IUPAC) nucleotide sequences and provides rigorous statistical calculations for the thermodynamic properties of primer pools.
+`DePPA.jl` is a high-performance, pure Julia package for multiple sequence alignment (MSA) analysis and **degenerate PCR primer design**. It natively handles IUPAC degenerate sequences and provides rigorous statistical calculations for the thermodynamic properties of complex primer pools.
 
-## Motivation
+## Why DePPA.jl?
 
-Standard bioinformatics tools often treat degenerate positions by selecting a consensus base or calculating thermodynamics for a single "average" sequence. Biophysically, however, a degenerate primer is a mixture of distinct oligonucleotides, each with its own unique $T_m$ and $\Delta G$. 
+Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 
-`DePPA.jl` addresses this by treating degenerate primers as statistical ensembles. Instead of a single point estimate, the package calculates the thermodynamic distribution of the primer pool. This allows researchers to quantitatively assess and mitigate amplification bias before entering the laboratory.
+`DePPA.jl` takes an **MSA as its primary input**, identifies conserved regions, and constructs degenerate primers capable of amplifying entire gene families simultaneously. 
 
-## Key Features
+### Ensemble Thermodynamics
+To ensure successful PCR amplification across all target variants, `DePPA.jl` evaluates the statistical distribution of thermodynamic parameters for the *entire primer pool*, rather than a single "average" sequence:
+*   **$T_m$ (Melting Temperature):** Calculates the distribution of melting temperatures across all variants to prevent amplification bias.
+*   **$\Delta G$ (Gibbs Free Energy):** Evaluates the stability of the primer-template duplex for all variants, ensuring no sequence forms excessively stable secondary structures or binds too weakly.
 
-*   **Strict Oligonucleotide Typing:** Distinct, type-stable structures for pure, degenerate, and gapped sequences, with zero-allocation sequence slicing.
-*   **MSA Analysis:** Efficient parsing of FASTA alignments, calculation of position-specific metrics (depth, determinacy), and generation of consensus sequences. Includes a customizable terminal viewer.
-*   **Thermodynamic Primer Design:** Automated MSA scanning and multi-criteria filtering. Primers are evaluated based on the statistical distribution of $T_m$ and $\Delta G$ across their degenerate variants.
-*   **Lazy Thermodynamic Engine:** Core alignment and sequence manipulation requires no external dependencies. Nearest-neighbor (NN) thermodynamic calculations (using parameters from SantaLucia, 2004 and Turner, 2009) are seamlessly integrated via a Julia Extension linking to [SeqFold.jl](https://github.com/phlaster/SeqFold.jl), loading the heavy dependencies only when required.
+The computational engine for nearest-neighbor (NN) thermodynamics is powered by extending the functionality of [SeqFold.jl](https://github.com/phlaster/SeqFold.jl). While `SeqFold` natively calculates properties for non-degenerate sequences, `DePPA.jl` expands degenerate oligos into their non-degenerate variants, computes the thermodynamics for each independently, and aggregates the results into a statistical distribution. The underlying NN parameters and complex salt corrections are based on the foundational biophysical models of SantaLucia & Hicks (2004) and Owczarzy et al. (2008).
 
 ## Comparison with Existing Solutions
 
-While several tools exist for PCR primer design, they often differ significantly in their handling of degenerate sequences, licensing models, and integration capabilities. 
+While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
 
-Below is a factual comparison of `DePPA.jl` against standard open-source libraries, free tools, and commercial suites.
-
-| Package | Degenerate Primer Design | License | Ecosystem & Integration | API & Documentation |
-| :--- | :--- | :--- | :--- | :--- |
-| **Primer3** | Not supported natively; single sequence only. | LGPL/GPL | Standalone C library; requires wrappers. | Config-file driven; legacy docs. |
-| **OpenPrimeR** | Specialized for degenerate pools. | GPL | R-only; difficult external integration. | Shiny GUI focused; secondary API. |
-| **Geneious Prime** | GUI-based; native IUPAC support. | Commercial | Closed Java plugin; paid license. | GUI-centric; secondary API. |
-| **CLC Genomics** | GUI-based; native IUPAC support. | Commercial | Closed ecosystem; limited scripting. | GUI-centric; manual-driven. |
-| **DePPA.jl** | Native ensemble thermodynamics; statistical distributions. | MIT | Native Julia; seamless Python interop. | Modern, type-stable API; inline docs. |
+<table style="width:100%; border-collapse: collapse; text-align: left;">
+  <thead>
+    <tr style="background-color: #f6f8fa; border-bottom: 2px solid #dfe2e5;">
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Package</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Works with MSA?</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Degenerate Primer Design</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">License</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Ecosystem & Integration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Primer3</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">No (Single seq)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Not supported natively</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">LGPL/GPL</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Standalone C library; requires wrappers.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>OpenPrimeR</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Limited (Heuristic)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">GPL</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">R-only; difficult external integration.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Geneious Prime</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed Java plugin; paid license.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>CLC Genomics</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed ecosystem; limited scripting.</td>
+    </tr>
+    <tr style="background-color: #eaf4ff; font-weight: bold; border: 2px solid #0969da;">
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><img src="docs/src/assets/logo.png" alt="DePPA.jl" width="120"></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes (Native)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Full Ensemble Thermodynamics</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">MIT</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Native Julia; seamless Python interop.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Installation
 
-To use the core alignment and sequence features, install `DePPA.jl`:
 ```julia
 julia> ]
+pkg> add DePPA MAFFT_jll SeqFold
+```
+> **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
 
-pkg> add DePPA
-pkg> add MAFFT_jll # MSA backend
-pkg> add SeqFold   # thermodynamic calculations backend
+## REPL Experience & Quickstart
 
-julia> using DePPA.Alignments, DePPA.Primers
+`DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
+
+```julia
+julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
+
 julia> using SeqFold, MAFFT_jll
-julia> setMSAShowStyle!(:bw); # monochrome REPL output theme, try `:polymorf`, `:allcolors`
+
+# Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
+julia> setMSAShowStyle!(:bw); 
 ```
 
-## Basic Usage
-
-### Quickstart
-
-First, we define a small set of unaligned sequences in memory and write them to a temporary FASTA file.
-
+### 1. Load and Align Sequences
 ```julia
 julia> data = """>1
               GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGCCGAAGCCCTG
@@ -77,11 +117,7 @@ julia> data = """>1
               CCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA""";
 
 julia> temp_file = tempname(); open(temp_file, "w") do f write(f, data) end;
-```
 
-Next, we construct an `MSA` object. Passing `mafft=true` triggers the MAFFT engine (via `MAFFT_jll`) to align the sequences in-place. The terminal output automatically displays a truncated view with a consensus track.
-
-```julia
 julia> alignment = MSA(temp_file; mafft=true)
 MSA with 5 sequences of length 101:
    -ATTTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAA…
@@ -93,7 +129,8 @@ MSA with 5 sequences of length 101:
    1        ⋅         ⋅         ⋅         ⋅         ⋅         ⋅         ⋅   75
 ```
 
-Now we generate candidate primers. The `construct_primers` function scans the alignment, filtering candidates based on reasonable defaults for $GC$ content, $T_m$, and $\Delta G$ distributions, and returns a list of valid primers. We do this for both forward (`is_forward=true`) and reverse (`is_forward=false`) primers.
+### 2. Construct Degenerate Primers
+The engine scans the alignment, filtering candidates based on $GC$ content, $T_m$, and $\Delta G$ distributions.
 
 ```julia
 julia> fwd = construct_primers(alignment); first(fwd)
@@ -127,7 +164,8 @@ Reverse degenerate primer with 2 deg. positions
   Description: "Reverse complement of Degenerate consensus for 5 seq MSA"
 ```
 
-Finally, we pair the forward and reverse primers. `best_pairs` matches primers based on the desired amplicon length and $T_m$ compatibility, returning the best combinations sorted by the smallest $T_m$ difference.
+### 3. Pair Primers
+`best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
 
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
@@ -139,47 +177,37 @@ Reverse: AATTGAGYTTGGCRGCCA at 51:68
 Tm: 55.8±0.1 °C
 ```
 
-## Thermodynamic Engine and Extensions
-
-`DePPA.jl` utilizes Julia's native package extension system. The computational lifting for nearest-neighbor thermodynamics is offloaded to `SeqFold.jl`. 
-
-When you call functions like `SeqFold.tm(primer)` or `construct_primers(...)`, the `SeqFoldExt` module intercepts these calls. It expands the degenerate primer into its non-degenerate variants, calculates the thermodynamics for each variant independently, and aggregates the results into a statistical distribution.
-
-If `SeqFold.jl` is not installed in your environment, the core `DePPA` modules will still load and function perfectly for sequence parsing and MSA manipulation, but thermodynamic functions will throw an informative error prompting you to install the extension.
-
-## Architecture and Performance
-
-Designed for modern multi-core systems, `DePPA.jl` leverages Julia's native multithreading for computationally intensive tasks such as MSA scanning, primer candidate generation, and Monte Carlo sampling of large degenerate pools. 
-
-The use of `OligoView` and `MSAView` ensures that slicing and subsetting operations are strictly $O(1)$ memory operations, allowing the package to handle massive metagenomic alignments without triggering garbage collection bottlenecks.
-
-## Calling from Python
+# Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
-Install the bridge via your preferred Python package manager:
 ```bash
-$ uv init
 $ uv add juliacall
 $ uv run python
 ```
-
-In your Python script or REPL:
+In Python REPL:
 ```python
-Python 3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ] on linux
-Type "help", "copyright", "credits" or "license" for more information.
 >>> from juliacall import Main as jl
 >>> jl.seval("""using Pkg; Pkg.add("DePPA"); Pkg.add("SeqFold")""")
 >>> jl.seval("using DePPA.Oligos, SeqFold")
 # Define convenient wrapper
 >>> jl.seval('calc_tm(seq::String) = tm(DegenOligo(seq))')
-# Call as a Python function
 >>> result = jl.calc_tm("AGACYGACCGHGAAYTMGACCT")
 >>> print(f"Mean Tm: {result.mean}, Confidence: {result.conf}")
 Mean Tm: 55.7, Confidence: (44.2, 65.6)
 ```
 
-*Note: As with any Julia-Python bridge, the first function call will incur a one-time latency due to Julia's JIT compilation. Subsequent calls will execute at native speeds.*
+## Roadmap
+
+*   **Primer Export:** Convenient export of constructed primers to standard formats (FASTA, CSV) for direct ordering.
+*   **Specificity Checks:** In silico verification of primer binding against the target matrix to filter out non-specific amplification.
+*   **Documentation:** Expanding the documentation with more comprehensive usage examples and tutorials.
+
+## References
+
+*   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
+*   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
+*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a>: The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 
