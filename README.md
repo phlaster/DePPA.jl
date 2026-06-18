@@ -207,7 +207,7 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 
 *   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
 *   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
-*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a>: The underlying nearest-neighbor thermodynamic engine.
+*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a> $-$ The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 
