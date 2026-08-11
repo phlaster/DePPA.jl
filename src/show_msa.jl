@@ -17,9 +17,9 @@ const BASE_COLORS = Dict{Char, Symbol}(
     '-' => :normal
 )
 
-const histbars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-
+const HISTBARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
 const MSA_SHOW_STYLE = Ref(:polymorf)
+const CONSENSUS_SHOW_TYPE = Ref(:degen)
 
 """
     setMSAShowStyle!(style::Symbol)
@@ -39,6 +39,37 @@ function setMSAShowStyle!(style::Symbol)
             "Invalid MSA show style: :$style. " *
             "Valid options are :bw, :polymorf, or :allcolors."
         ))
+    end
+end
+
+"""
+    setMSAconsensusShowType!(style::Symbol)
+
+Set the consensus sequence type displayed above the alignment in `show`.
+
+Valid options:
+- `:degen` – degenerate consensus (default, uses [`consensus_degen`](@ref) with `slack=0.0`)
+- `:major` – simple majority rule consensus (uses [`consensus_major`](@ref))
+
+Note: Dots in `:bw` and `:polymorf` styles always mark matches to the **majority** consensus,
+regardless of this setting.
+"""
+function setMSAconsensusShowType!(style::Symbol)
+    if style in (:degen, :major)
+        CONSENSUS_SHOW_TYPE[] = style
+    else
+        throw(ArgumentError(
+            "Invalid consensus show type: :$style. " *
+            "Valid options are :degen or :major."
+        ))
+    end
+end
+
+function _consensus_char(msa::AbstractMSA, pos::Int, type::Symbol)
+    if type == :major
+        return consensus_major(msa, pos)
+    else  # :degen
+        return consensus_degen(msa, pos; slack=0.0)
     end
 end
 
@@ -85,7 +116,7 @@ function Base.show(io::IO, msa::AbstractMSA)
     max_display_width = max(20, terminal_width - desc_width - 7)
 
     needs_width_ellipsis = seq_length > max_display_width
-    max_seq_chars = needs_width_ellipsis ? max_display_width - 3 : max_display_width
+    max_seq_chars = needs_width_ellipsis ? max_display_width - 1 : max_display_width
     displayed_cols_range = 1:min(seq_length, max_seq_chars)
 
     abs_cols = if msa isa MSAView
@@ -99,8 +130,12 @@ function Base.show(io::IO, msa::AbstractMSA)
     
     style = MSA_SHOW_STYLE[]
     
-    # Precompute consensus characters for :bw and :polymorf styles
-    consensus_chars = Vector{Char}(undef, length(displayed_cols_range))
+    safe_msa = msa
+    if msa isa MSAView && !_is_full_height(msa)
+        safe_msa = MSA(msa; bootstrap=0)
+    end
+
+    dot_chars = Vector{Char}(undef, length(displayed_cols_range))
     if style != :allcolors
         for dj in 1:length(displayed_cols_range)
             counts = Dict{Char, Int}()
@@ -108,7 +143,6 @@ function Base.show(io::IO, msa::AbstractMSA)
                 c = getsequence(msa, i, dj)
                 counts[c] = get(counts, c, 0) + 1
             end
-            
             max_count = -1
             maj_c = '-'
             for (c, count) in counts
@@ -117,31 +151,30 @@ function Base.show(io::IO, msa::AbstractMSA)
                     maj_c = c
                 end
             end
-            consensus_chars[dj] = maj_c
+            dot_chars[dj] = maj_c
         end
     end
 
-    # Print the header line (histbars or consensus)
-    if style == :allcolors
-        msa_all_rows = _returnrows(msa)
+    if style != :allcolors
+        con_type = CONSENSUS_SHOW_TYPE[]
         for dj in 1:length(displayed_cols_range)
-            pos_counts = vec(get_base_count(msa_all_rows, dj))
-            major_nuc = "ACGT"[argmax(pos_counts)]
-            depth = only(msadepth(msa_all_rows, dj))
-            bar_index = clamp(floor(Int, depth * 8) + 1, 1, 8)
-            bar_char = histbars[bar_index]
-            color = get(BASE_COLORS, major_nuc, :normal)
-            printstyled(io, bar_char; color=color)
+            header_char = _consensus_char(safe_msa, dj, con_type)
+            if style == :polymorf
+                color = get(BASE_COLORS, header_char, :normal)
+                printstyled(io, header_char; color=color, reverse=true)
+            else
+                print(io, header_char)
+            end
         end
     else
         for dj in 1:length(displayed_cols_range)
-            c = consensus_chars[dj]
-            if style == :polymorf
-                color = get(BASE_COLORS, c, :normal)
-                printstyled(io, c; color=color, reverse=true)
-            else
-                print(io, c)
-            end
+            pos_counts = vec(get_base_count(safe_msa, dj))
+            major_nuc = "ACGT"[argmax(pos_counts)]
+            depth = only(msadepth(safe_msa, dj))
+            bar_index = clamp(floor(Int, depth * 8) + 1, 1, 8)
+            bar_char = HISTBARS[bar_index]
+            color = get(BASE_COLORS, major_nuc, :normal)
+            printstyled(io, bar_char; color=color)
         end
     end
 
@@ -155,7 +188,6 @@ function Base.show(io::IO, msa::AbstractMSA)
 
     println(io)
 
-    # Print the sequences
     for i in 1:n_display_seqs
         if has_desc
             print(io, padded_descs[i], " >")
@@ -166,13 +198,13 @@ function Base.show(io::IO, msa::AbstractMSA)
                 col = get(BASE_COLORS, c, :normal)
                 printstyled(io, c; color=col, reverse=true)
             elseif style == :bw
-                if c == consensus_chars[dj]
+                if c == dot_chars[dj] && c != '-'
                     print(io, '.')
                 else
                     print(io, c)
                 end
             else # :polymorf
-                if c == consensus_chars[dj]
+                if c == dot_chars[dj] && c != '-'
                     print(io, '.')
                 else
                     col = get(BASE_COLORS, c, :normal)
@@ -191,14 +223,12 @@ function Base.show(io::IO, msa::AbstractMSA)
         println(io)
     end
 
-    # Print the gap below sequence names if truncated
     gap_below_seqnames = fill(' ', desc_width)
     if n_display_seqs < n_sequences && length(gap_below_seqnames) ≥ 3
         gap_below_seqnames[1:3] .= '.'
     end
     has_desc && print(io, join(gap_below_seqnames))
 
-    # Print the position number line
     num_line_chars = fill(' ', length(displayed_cols_range))
     
     start_num_str = string(first(abs_cols))
@@ -224,13 +254,16 @@ function Base.show(io::IO, msa::AbstractMSA)
     
     @inbounds for (rel_idx, abs_pos) in enumerate(abs_cols)
         if abs_pos % 10 == 0 && num_line_chars[rel_idx] == ' '
-            num_line_chars[rel_idx] = '⋅'
+            num_line_chars[rel_idx] = '·'
         end
-        if abs_pos % 100 == 0 && num_line_chars[rel_idx] == '⋅'
-            num_line_chars[rel_idx] = '*'
+        if abs_pos % 50 == 0 && num_line_chars[rel_idx] == '·'
+            num_line_chars[rel_idx] = '⌢'
         end
-        if abs_pos % 1000 == 0 && num_line_chars[rel_idx] == '*'
-            num_line_chars[rel_idx] = '#'
+        if abs_pos % 100 == 0 && num_line_chars[rel_idx] == '⌢'
+            num_line_chars[rel_idx] = ':'
+        end
+        if abs_pos % 1000 == 0 && num_line_chars[rel_idx] == ':'
+            num_line_chars[rel_idx] = '∴'
         end
     end
     

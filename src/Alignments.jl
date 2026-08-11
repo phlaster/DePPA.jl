@@ -10,7 +10,7 @@ export AbstractMSA, MSA, MSAView
 export nseqs, width, height, getsequence, get_base_count
 export msadepth, msadet, root, bval
 export consensus_major, consensus_degen, dry_msa, nucleotide_diversity
-export setMSAShowStyle!
+export setMSAShowStyle!, setMSAconsensusShowType!
 
 function _bootstrap_base_counts(
     seqs::Vector{<:AbstractString}, 
