@@ -26,56 +26,6 @@ The computational engine for nearest-neighbor (NN) thermodynamics is powered by 
 
 ## Comparison with Existing Solutions
 
-While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences.
-
-<table style="width:100%; border-collapse: collapse; text-align: left;">
-  <thead>
-    <tr style="background-color: #f6f8fa; border-bottom: 2px solid #dfe2e5;">
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Package</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Works with MSA?</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Degenerate Primer Design</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">License</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Ecosystem & Integration</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Primer3</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">No (Single seq)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Not supported natively</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">LGPL/GPL</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Standalone C library; requires wrappers.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>OpenPrimeR</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Limited (Heuristic)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">GPL</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">R-only; difficult external integration.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Geneious Prime</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed Java plugin; paid license.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>CLC Genomics</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed ecosystem; limited scripting.</td>
-    </tr>
-    <tr style="background-color: #eaf4ff; font-weight: bold; border: 2px solid #0969da;">
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><img src="docs/src/assets/logo.png" alt="DePPA.jl" width="120"></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes (Native)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Full Ensemble Thermodynamics</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">MIT</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Native Julia; seamless Python interop.</td>
-    </tr>
-  </tbody>
-</table>
 While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
 
 <table style="width:100%; border-collapse: collapse; text-align: left;">
@@ -129,26 +79,10 @@ While several tools exist for PCR primer design, they fundamentally differ in th
 
 ## Installation
 
-```julia
-julia> ]
-pkg> add DePPA MAFFT_jll SeqFold
-```
-> **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
-
-## REPL Experience & Quickstart
-
 `DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
 
-```julia
-julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
-
-pkg> add DePPA MAFFT_jll SeqFold
-```
 > **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
 
-## REPL Experience & Quickstart
-
-`DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
 
 ```julia
 julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
@@ -198,10 +132,9 @@ The engine scans the alignment, filtering candidates based on $GC$ content, $T_m
 
 ```julia
 julia> fwd = construct_primers(alignment); first(fwd)
-Constructing F... 100%|██████████| Time: 0:00:01
 Forward degenerate primer with 2 deg. positions
-                                             \50:66>
-|==============================================================================101|
+                                                           \50:66>
+|=====================================================================================86|
 
   Sequence: CTGGCYGCCAARCTCAA
   Length: 17
@@ -216,8 +149,8 @@ julia> rev = construct_primers(alignment; is_forward=false); first(rev)
 Constructing R... 100%|██████████| Time: 0:00:00
 Reverse degenerate primer with 2 deg. positions
 
-|==============================================================================101|
-                                 <50:66\
+|=====================================================================================86|
+                                           <50:66\
   Sequence: TTGAGYTTGGCRGCCAG
   Length: 17
   Positions: 50:66
@@ -230,14 +163,12 @@ Reverse degenerate primer with 2 deg. positions
 
 ### 3. Pair Primers
 `best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
-### 3. Pair Primers
-`best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
 
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
 PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
-              >_________________51bp_________________<                         
-|==============================================================================101|
+                  >______________________51bp______________________<                     
+|=====================================================================================86|
 Forward: AGACYGACCGHGAAYTMGACCT at 18:39
 Reverse: AATTGAGYTTGGCRGCCA at 51:68
 Tm: 55.8±0.1 °C
