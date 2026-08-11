@@ -10,9 +10,12 @@
 ## Introduction
 
 `DePPA.jl` is a high-performance, pure Julia package for multiple sequence alignment (MSA) analysis and **degenerate PCR primer design**. It natively handles IUPAC degenerate sequences and provides rigorous statistical calculations for the thermodynamic properties of complex primer pools.
+`DePPA.jl` is a high-performance, pure Julia package for multiple sequence alignment (MSA) analysis and **degenerate PCR primer design**. It natively handles IUPAC degenerate sequences and provides rigorous statistical calculations for the thermodynamic properties of complex primer pools.
 
 ## Why DePPA.jl?
+## Why DePPA.jl?
 
+Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 
 `DePPA.jl` takes an **MSA as its primary input**, identifies conserved regions, and constructs degenerate primers capable of amplifying entire gene families simultaneously.
@@ -27,6 +30,56 @@ The computational engine for nearest-neighbor (NN) thermodynamics is powered by 
 ## Comparison with Existing Solutions
 
 While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences.
+
+<table style="width:100%; border-collapse: collapse; text-align: left;">
+  <thead>
+    <tr style="background-color: #f6f8fa; border-bottom: 2px solid #dfe2e5;">
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Package</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Works with MSA?</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Degenerate Primer Design</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">License</th>
+      <th style="padding: 10px; border: 1px solid #dfe2e5;">Ecosystem & Integration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Primer3</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">No (Single seq)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Not supported natively</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">LGPL/GPL</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Standalone C library; requires wrappers.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>OpenPrimeR</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Limited (Heuristic)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">GPL</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">R-only; difficult external integration.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Geneious Prime</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed Java plugin; paid license.</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>CLC Genomics</b></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed ecosystem; limited scripting.</td>
+    </tr>
+    <tr style="background-color: #eaf4ff; font-weight: bold; border: 2px solid #0969da;">
+      <td style="padding: 10px; border: 1px solid #dfe2e5;"><img src="docs/src/assets/logo.png" alt="DePPA.jl" width="120"></td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes (Native)</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Full Ensemble Thermodynamics</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">MIT</td>
+      <td style="padding: 10px; border: 1px solid #dfe2e5;">Native Julia; seamless Python interop.</td>
+    </tr>
+  </tbody>
+</table>
+While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
 
 <table style="width:100%; border-collapse: collapse; text-align: left;">
   <thead>
@@ -92,6 +145,17 @@ pkg> add DePPA MAFFT_jll SeqFold
 ```julia
 julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
 
+pkg> add DePPA MAFFT_jll SeqFold
+```
+> **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
+
+## REPL Experience & Quickstart
+
+`DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
+
+```julia
+julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
+
 julia> using SeqFold, MAFFT_jll
 
 # Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
@@ -99,10 +163,12 @@ julia> setMSAShowStyle!(:bw);
 
 # Optional: set the consensus type shown above the MSA (:major, :degen)
 julia> setMSAconsensusShowType!(:major);
+
+# Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
+julia> setMSAShowStyle!(:bw); 
 ```
 
 ### 1. Load and Align Sequences
-
 ```julia
 julia> data = """>1
                GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGC
@@ -170,6 +236,8 @@ Reverse degenerate primer with 2 deg. positions
 
 ### 3. Pair Primers
 `best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
+### 3. Pair Primers
+`best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
 
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
@@ -182,6 +250,7 @@ Tm: 55.8±0.1 °C
 ```
 
 # Python Integration
+# Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
@@ -189,6 +258,7 @@ Tm: 55.8±0.1 °C
 $ uv add juliacall
 $ uv run python
 ```
+In Python REPL:
 In Python REPL:
 ```python
 >>> from juliacall import Main as jl
@@ -208,10 +278,9 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 * **Documentation:** Expanding the documentation with more comprehensive usage examples and tutorials.
 
 ## References
-
-* **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
-* **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
-* $-$ The underlying nearest-neighbor thermodynamic engine.
+*   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
+*   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
+*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a>: The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 
