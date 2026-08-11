@@ -1,11 +1,16 @@
-# <div align="center"> <img src="docs/src/assets/logo.png" alt="DePPA.jl: Degenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
-
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://phlaster.github.io/DePPA.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://phlaster.github.io/DePPA.jl/dev/)
-[![Build Status](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster)
-[![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
-[![codecov](https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA)](https://codecov.io/gh/phlaster/DePPA.jl)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<div align="center">
+  <img src="docs/src/assets/logo.png" alt="DePPA.jl: Degenerate Primer Pair Assembler" width="500">
+  <h3>Degenerate Primer Pair Assembler</h3>
+  
+  <p align="center" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">
+    <a href="https://phlaster.github.io/DePPA.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Stable Docs"></a>
+    <a href="https://phlaster.github.io/DePPA.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev Docs"></a>
+    <a href="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster"><img src="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master" alt="Build Status"></a>
+    <a href="https://github.com/JuliaTesting/Aqua.jl"><img src="https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg" alt="Aqua QA"></a>
+    <a href="https://codecov.io/gh/phlaster/DePPA.jl"><img src="https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA" alt="Codecov"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  </p>
+</div>
 
 ## Introduction
 
@@ -83,10 +88,10 @@ While several tools exist for PCR primer design, they fundamentally differ in th
 
 > **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
 
-
 ```julia
+julia> using Pkg
+julia> Pkg.add("DePPA.jl")
 julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
-
 julia> using SeqFold, MAFFT_jll
 
 # Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
@@ -187,7 +192,7 @@ julia> export_evrogen("primers.txt", bp[1:2])
 "primers.txt"
 ```
 
-# Python Integration
+## Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
@@ -195,7 +200,7 @@ julia> export_evrogen("primers.txt", bp[1:2])
 $ uv add juliacall
 $ uv run python
 ```
-In Python REPL:
+
 In Python REPL:
 ```python
 >>> from juliacall import Main as jl
@@ -209,9 +214,9 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 ```
 
 ## References
-*   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
-*   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
-*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a>: The underlying nearest-neighbor thermodynamic engine.
+* **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
+* **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
+* [SeqFold.jl](https://github.com/phlaster/SeqFold.jl) — The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 
