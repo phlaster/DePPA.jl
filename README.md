@@ -10,12 +10,9 @@
 ## Introduction
 
 `DePPA.jl` is a high-performance, pure Julia package for multiple sequence alignment (MSA) analysis and **degenerate PCR primer design**. It natively handles IUPAC degenerate sequences and provides rigorous statistical calculations for the thermodynamic properties of complex primer pools.
-`DePPA.jl` is a high-performance, pure Julia package for multiple sequence alignment (MSA) analysis and **degenerate PCR primer design**. It natively handles IUPAC degenerate sequences and provides rigorous statistical calculations for the thermodynamic properties of complex primer pools.
 
 ## Why DePPA.jl?
-## Why DePPA.jl?
 
-Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 
 `DePPA.jl` takes an **MSA as its primary input**, identifies conserved regions, and constructs degenerate primers capable of amplifying entire gene families simultaneously.
@@ -162,10 +159,7 @@ julia> using SeqFold, MAFFT_jll
 julia> setMSAShowStyle!(:bw);
 
 # Optional: set the consensus type shown above the MSA (:major, :degen)
-julia> setMSAconsensusShowType!(:major);
-
-# Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
-julia> setMSAShowStyle!(:bw); 
+julia> setMSAconsensusShowType!(:major); 
 ```
 
 ### 1. Load and Align Sequences
@@ -250,7 +244,6 @@ Tm: 55.8±0.1 °C
 ```
 
 # Python Integration
-# Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
@@ -270,12 +263,6 @@ In Python REPL:
 >>> print(f"Mean Tm: {result.mean}, Confidence: {result.conf}")
 Mean Tm: 55.7, Confidence: (44.2, 65.6)
 ```
-
-## Roadmap
-
-* **Primer Export:** Convenient export of constructed primers to standard formats (FASTA, CSV) for direct ordering.
-* **Specificity Checks:** In silico verification of primer binding against the target matrix to filter out non-specific amplification.
-* **Documentation:** Expanding the documentation with more comprehensive usage examples and tutorials.
 
 ## References
 *   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
