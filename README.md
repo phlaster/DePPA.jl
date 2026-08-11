@@ -15,18 +15,18 @@
 
 Most standard bioinformatics tools (like **Primer3**) are designed exclusively for *single, pure sequences* and cannot natively process MSAs. Commercial suites (Geneious, CLC) offer basic IUPAC support but often rely on simplistic consensus algorithms that ignore the thermodynamic reality of mixed primer pools.
 
-`DePPA.jl` takes an **MSA as its primary input**, identifies conserved regions, and constructs degenerate primers capable of amplifying entire gene families simultaneously. 
+`DePPA.jl` takes an **MSA as its primary input**, identifies conserved regions, and constructs degenerate primers capable of amplifying entire gene families simultaneously.
 
 ### Ensemble Thermodynamics
 To ensure successful PCR amplification across all target variants, `DePPA.jl` evaluates the statistical distribution of thermodynamic parameters for the *entire primer pool*, rather than a single "average" sequence:
-*   **$T_m$ (Melting Temperature):** Calculates the distribution of melting temperatures across all variants to prevent amplification bias.
-*   **$\Delta G$ (Gibbs Free Energy):** Evaluates the stability of the primer-template duplex for all variants, ensuring no sequence forms excessively stable secondary structures or binds too weakly.
+* **$T_m$ (Melting Temperature):** Calculates the distribution of melting temperatures across all variants to prevent amplification bias.
+* **$\Delta G$ (Gibbs Free Energy):** Evaluates the stability of the primer-template duplex for all variants, ensuring no sequence forms excessively stable secondary structures or binds too weakly.
 
 The computational engine for nearest-neighbor (NN) thermodynamics is powered by extending the functionality of [SeqFold.jl](https://github.com/phlaster/SeqFold.jl). While `SeqFold` natively calculates properties for non-degenerate sequences, `DePPA.jl` expands degenerate oligos into their non-degenerate variants, computes the thermodynamics for each independently, and aggregates the results into a statistical distribution. The underlying NN parameters and complex salt corrections are based on the foundational biophysical models of SantaLucia & Hicks (2004) and Owczarzy et al. (2008).
 
 ## Comparison with Existing Solutions
 
-While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
+While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences.
 
 <table style="width:100%; border-collapse: collapse; text-align: left;">
   <thead>
@@ -95,38 +95,42 @@ julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
 julia> using SeqFold, MAFFT_jll
 
 # Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
-julia> setMSAShowStyle!(:bw); 
+julia> setMSAShowStyle!(:bw);
+
+# Optional: set the consensus type shown above the MSA (:major, :degen)
+julia> setMSAconsensusShowType!(:major);
 ```
 
 ### 1. Load and Align Sequences
+
 ```julia
 julia> data = """>1
-              GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGCCGAAGCCCTG
-              GCCGCCAAGCTCAATTCGAAGCTCATTCACTTCGTGCCGCGCGAC
-              >2
-              CATTTGCAACGAGCGTCAGACCGACCGCGAACTCGACCTGGCCGAAGCGCTG
-              GCTGCCAAACTCAATTCTAAGCTCATCCACTTCGTGCCACGC
-              >3
-              CATTTGTAACGAGCGTCAGACCGACCGTGAACTCGACCTCGCCGAAGCGCTG
-              GCTGCCAAACTCAATTCCAAGCTCATCCACTTCGTGCCACGCGACAA
-              >4
-              CTGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCC
-              GCCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA
-              >5
-              TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCCG
-              CCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA""";
+               GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGC
+               CGAAGCCCTGGCCGCCAAGCTCAATTCGAAGCTCATTCAC
+               >2
+               CATTTGCAACGAGCGTCAGACCGACCGCGAACTCGACCTGGC
+               CGAAGCGCTGGCTGCCAAACTCAATTCTAAGCTCATC
+               >3
+               CATTTGTAACGAGCGTCAGACCGACCGTGAACTCGACCTCGC
+               CGAGCTGCCAAACTCAATTCCAAGCTCATCCACTT
+               >4
+               CTGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGA
+               AGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTTG
+               >5
+               TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAA
+               GCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTAG""";
 
 julia> temp_file = tempname(); open(temp_file, "w") do f write(f, data) end;
 
 julia> alignment = MSA(temp_file; mafft=true)
-MSA with 5 sequences of length 101:
-   -ATTTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAA…
-1 >G..C.....T.................C....................C..........................…
-2 >C.....C........T...........C...C.C.....G..............T.....A........T.....…
-3 >C..............T...........T...C.C....................T.....A........C.....…
-4 >.--C.................T....................T................................…
-5 >.---.................T....................T................................…
-   1        ⋅         ⋅         ⋅         ⋅         ⋅         ⋅         ⋅   75
+MSA with 5 sequences of length 86:
+   CATCTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTT--
+1 >G..C.....T.................C....................C.................................----
+2 >C.....C........T...........C...C.C.....G..............T.....A........T........C-------
+3 >C..............T...........T...C.C...........-------..T.....A........C........C.....--
+4 >---C.................T....................T.........................................TG
+5 >----.................T....................T.........................................AG
+   1        ·         ·         ·         ·         ⌢         ·         ·         ·    86
 ```
 
 ### 2. Construct Degenerate Primers
@@ -170,7 +174,7 @@ Reverse degenerate primer with 2 deg. positions
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
 PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
-              >_________________51bp_________________<                             
+              >_________________51bp_________________<                         
 |==============================================================================101|
 Forward: AGACYGACCGHGAAYTMGACCT at 18:39
 Reverse: AATTGAGYTTGGCRGCCA at 51:68
@@ -199,15 +203,15 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 
 ## Roadmap
 
-*   **Primer Export:** Convenient export of constructed primers to standard formats (FASTA, CSV) for direct ordering.
-*   **Specificity Checks:** In silico verification of primer binding against the target matrix to filter out non-specific amplification.
-*   **Documentation:** Expanding the documentation with more comprehensive usage examples and tutorials.
+* **Primer Export:** Convenient export of constructed primers to standard formats (FASTA, CSV) for direct ordering.
+* **Specificity Checks:** In silico verification of primer binding against the target matrix to filter out non-specific amplification.
+* **Documentation:** Expanding the documentation with more comprehensive usage examples and tutorials.
 
 ## References
 
-*   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
-*   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
-*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a> $-$ The underlying nearest-neighbor thermodynamic engine.
+* **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
+* **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
+* $-$ The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 
