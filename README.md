@@ -174,6 +174,19 @@ Reverse: AATTGAGYTTGGCRGCCA at 51:68
 Tm: 55.8±0.1 °C
 ```
 
+### 4. Export!
+
+```julia
+julia> export_evrogen(stdout, bp[1:2])
+Degenerate consensus for 5 seq MSA_F_18; AGACYGACCGHGAAYTMGACCT; 0.04
+Reverse complement of Degenerate consensus for 5 seq MSA_R_51; AATTGAGYTTGGCRGCCA; 0.04
+Degenerate consensus for 5 seq MSA_F_28; HGAAYTMGACCTSGCYGAAGC; 0.04
+Reverse complement of Degenerate consensus for 5 seq MSA_R_57; TGAGCTTVGAATTGAGYTTGG; 0.04
+
+julia> export_evrogen("primers.txt", bp[1:2])
+"primers.txt"
+```
+
 # Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).

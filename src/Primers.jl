@@ -2,7 +2,7 @@ module Primers
 
 export AbstractPrimer
 export Primer
-export construct_primers, best_pairs
+export construct_primers, best_pairs, export_evrogen
 
 using ..Oligos
 using ..Alignments
@@ -325,5 +325,6 @@ end
 Base.convert(::Type{Pair{Primer}}, p::Pair{<:AbstractPrimer, <:AbstractPrimer}) = p
 
 include("show_primers.jl")
+include("export_primers.jl")
 
 end # module
