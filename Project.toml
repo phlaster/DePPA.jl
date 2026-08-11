@@ -1,7 +1,7 @@
 name = "DePPA"
 uuid = "47e0b4c3-c02b-4df9-862c-39042bcbb8d1"
 authors = ["phlaster <phlaster@users.noreply.github.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 FastaIO = "a0c94c4b-ebed-5953-b5fc-82fe598ac79f"
