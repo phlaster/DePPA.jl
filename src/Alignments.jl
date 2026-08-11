@@ -447,7 +447,7 @@ See also [`consensus_degen`](@ref), [`get_base_count`](@ref).
 """
 function consensus_major(msa::AbstractMSA, pos::Int)
     p = get_base_count(msa, pos)
-    if sum(p) == 0
+    if sum(p) < 0.5
         return '-'
     end
     return NON_DEGEN_BASES[argmax(p)]
@@ -479,7 +479,7 @@ See also [`consensus_major`](@ref), [`get_base_count`](@ref).
 function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)::Char
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     p = get_base_count(msa, pos)
-    if sum(p) == 0
+    if sum(p) < 0.5
         return '-'
     end
     active = findall(>(slack), p)

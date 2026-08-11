@@ -73,6 +73,13 @@ function Primer(
     _cons = consensus_degen(msa, interval; slack=slack)
     gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
     
+    if hasgaps(gapped_cons)
+        throw(ArgumentError(
+            "Cannot construct primer for interval $interval: " *
+            "consensus contains gaps (excessive gaps in MSA region)."
+        ))
+    end
+    
     underlying_oligo = DegenOligo(String(gapped_cons), string(descr))
     
     Tm = _ext_tm(underlying_oligo; max_samples=max_samples, conf_int=tm_conf_int, conditions=tm_conds)
