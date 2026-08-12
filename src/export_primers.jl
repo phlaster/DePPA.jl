@@ -17,7 +17,7 @@ IUPAC ambiguity codes are preserved, as required by Evrogen.
 - `scale`: Synthesis scale (e.g., `0.04`, `0.2`, `1.0`). Defaults to `0.04`.
 
 # Returns
-- For `IO` methods: returns the `io` stream.
+- For `IO` methods: returns `nothing`;
 - For file methods: returns the `filename`.
 """
 function export_evrogen(io::IO, primers::AbstractVector{<:AbstractPrimer}; scale::Union{Real,AbstractString}=0.04)
@@ -70,6 +70,7 @@ function _write_evrogen!(io::IO, primers::AbstractVector{<:AbstractPrimer}; scal
         seq = String(p.consensus)
         println(io, "$name; $seq; $scale")
     end
+    return nothing
 end
 
 function _write_evrogen!(io::IO, pairs::AbstractVector{<:Pair}; scale::Union{Real,AbstractString}=0.04)
@@ -85,6 +86,7 @@ function _write_evrogen!(io::IO, pairs::AbstractVector{<:Pair}; scale::Union{Rea
         
         idx += 1
     end
+    return nothing
 end
 
 function _evrogen_name(p::AbstractPrimer, idx::Int)
