@@ -31,7 +31,7 @@ The computational engine for nearest-neighbor (NN) thermodynamics is powered by 
 
 ## Comparison with Existing Solutions
 
-While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
+While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences.
 
 <table style="width:100%; border-collapse: collapse; text-align: left;">
   <thead>
