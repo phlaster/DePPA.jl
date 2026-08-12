@@ -1,11 +1,16 @@
-# <div align="center"> <img src="docs/src/assets/logo.png" alt="DePPA.jl: Degenerate Primer Pair Assembler" width="500"></div><div align="center">Degenerate Primer Pair Assembler</div>
-
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://phlaster.github.io/DePPA.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://phlaster.github.io/DePPA.jl/dev/)
-[![Build Status](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster)
-[![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
-[![codecov](https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA)](https://codecov.io/gh/phlaster/DePPA.jl)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<div align="center">
+  <img src="docs/src/assets/logo.png" alt="DePPA.jl: Degenerate Primer Pair Assembler" width="500">
+  <h3>Degenerate Primer Pair Assembler</h3>
+  
+  <p align="center" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">
+    <a href="https://phlaster.github.io/DePPA.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Stable Docs"></a>
+    <a href="https://phlaster.github.io/DePPA.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev Docs"></a>
+    <a href="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster"><img src="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master" alt="Build Status"></a>
+    <a href="https://github.com/JuliaTesting/Aqua.jl"><img src="https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg" alt="Aqua QA"></a>
+    <a href="https://codecov.io/gh/phlaster/DePPA.jl"><img src="https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA" alt="Codecov"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  </p>
+</div>
 
 ## Introduction
 
@@ -76,83 +81,17 @@ While several tools exist for PCR primer design, they fundamentally differ in th
     </tr>
   </tbody>
 </table>
-While several tools exist for PCR primer design, they fundamentally differ in their handling of alignments and degenerate sequences. 
-
-<table style="width:100%; border-collapse: collapse; text-align: left;">
-  <thead>
-    <tr style="background-color: #f6f8fa; border-bottom: 2px solid #dfe2e5;">
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Package</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Works with MSA?</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Degenerate Primer Design</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">License</th>
-      <th style="padding: 10px; border: 1px solid #dfe2e5;">Ecosystem & Integration</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Primer3</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">No (Single seq)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Not supported natively</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">LGPL/GPL</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Standalone C library; requires wrappers.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>OpenPrimeR</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Limited (Heuristic)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">GPL</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">R-only; difficult external integration.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>Geneious Prime</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed Java plugin; paid license.</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><b>CLC Genomics</b></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Basic (Consensus only)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Commercial</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Closed ecosystem; limited scripting.</td>
-    </tr>
-    <tr style="background-color: #eaf4ff; font-weight: bold; border: 2px solid #0969da;">
-      <td style="padding: 10px; border: 1px solid #dfe2e5;"><img src="docs/src/assets/logo.png" alt="DePPA.jl" width="120"></td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5; text-align: center;">Yes (Native)</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Full Ensemble Thermodynamics</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">MIT</td>
-      <td style="padding: 10px; border: 1px solid #dfe2e5;">Native Julia; seamless Python interop.</td>
-    </tr>
-  </tbody>
-</table>
 
 ## Installation
 
-```julia
-julia> ]
-pkg> add DePPA MAFFT_jll SeqFold
-```
-> **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
-
-## REPL Experience & Quickstart
-
 `DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
 
-```julia
-julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
-
-pkg> add DePPA MAFFT_jll SeqFold
-```
 > **`MAFFT_jll` is used for automatic alignment, and `SeqFold` serves as the backend for nearest-neighbor thermodynamic calculations.**
 
-## REPL Experience & Quickstart
-
-`DePPA.jl` is designed to be highly interactive directly from the Julia REPL. It features rich, color-coded terminal output for alignments and primers.
-
 ```julia
+julia> using Pkg
+julia> Pkg.add("DePPA.jl")
 julia> using DePPA.Alignments, DePPA.Primers, DePPA.Oligos
-
 julia> using SeqFold, MAFFT_jll
 
 # Optional: set the REPL visualization style (:bw, :polymorf, or :allcolors)
@@ -198,10 +137,9 @@ The engine scans the alignment, filtering candidates based on $GC$ content, $T_m
 
 ```julia
 julia> fwd = construct_primers(alignment); first(fwd)
-Constructing F... 100%|██████████| Time: 0:00:01
 Forward degenerate primer with 2 deg. positions
-                                             \50:66>
-|==============================================================================101|
+                                                           \50:66>
+|=====================================================================================86|
 
   Sequence: CTGGCYGCCAARCTCAA
   Length: 17
@@ -216,8 +154,8 @@ julia> rev = construct_primers(alignment; is_forward=false); first(rev)
 Constructing R... 100%|██████████| Time: 0:00:00
 Reverse degenerate primer with 2 deg. positions
 
-|==============================================================================101|
-                                 <50:66\
+|=====================================================================================86|
+                                           <50:66\
   Sequence: TTGAGYTTGGCRGCCAG
   Length: 17
   Positions: 50:66
@@ -230,20 +168,31 @@ Reverse degenerate primer with 2 deg. positions
 
 ### 3. Pair Primers
 `best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
-### 3. Pair Primers
-`best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
 
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
 PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
-              >_________________51bp_________________<                         
-|==============================================================================101|
+                  >______________________51bp______________________<                     
+|=====================================================================================86|
 Forward: AGACYGACCGHGAAYTMGACCT at 18:39
 Reverse: AATTGAGYTTGGCRGCCA at 51:68
 Tm: 55.8±0.1 °C
 ```
 
-# Python Integration
+### 4. Export!
+
+```julia
+julia> export_evrogen(stdout, bp[1:2])
+Degenerate consensus for 5 seq MSA_F_18; AGACYGACCGHGAAYTMGACCT; 0.04
+Reverse complement of Degenerate consensus for 5 seq MSA_R_51; AATTGAGYTTGGCRGCCA; 0.04
+Degenerate consensus for 5 seq MSA_F_28; HGAAYTMGACCTSGCYGAAGC; 0.04
+Reverse complement of Degenerate consensus for 5 seq MSA_R_57; TGAGCTTVGAATTGAGYTTGG; 0.04
+
+julia> export_evrogen("primers.txt", bp[1:2])
+"primers.txt"
+```
+
+## Python Integration
 
 `DePPA.jl` can be seamlessly integrated into Python bioinformatics pipelines using [`juliacall`](https://pypi.org/project/juliacall/).
 
@@ -251,7 +200,7 @@ Tm: 55.8±0.1 °C
 $ uv add juliacall
 $ uv run python
 ```
-In Python REPL:
+
 In Python REPL:
 ```python
 >>> from juliacall import Main as jl
@@ -265,9 +214,9 @@ Mean Tm: 55.7, Confidence: (44.2, 65.6)
 ```
 
 ## References
-*   **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
-*   **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
-*   <a href="https://github.com/phlaster/SeqFold.jl" target="_blank"><img src="https://raw.githubusercontent.com/phlaster/SeqFold.jl/0ee91b0601645fba350643b9fe767dd8d89a0f90/docs/src/assets/logo.png" alt="SeqFold.jl Logo" width="120" align="middle"></a>: The underlying nearest-neighbor thermodynamic engine.
+* **SantaLucia, J., & Hicks, D. (2004)**. Thermodynamics of DNA-RNA interactions and DNA-DNA interactions. *Annual Review of Biophysics and Biomolecular Structure*, 33, 415-440.
+* **Owczarzy, R., Moreira, B. G., You, Y., Behlke, M. A., Walder, J. A., & Walder, J. (2008)**. Effects of sodium, magnesium, and spermidine on the stability of DNA duplexes. *Biochemistry*, 47(20), 5336-5353.
+* [SeqFold.jl](https://github.com/phlaster/SeqFold.jl) — The underlying nearest-neighbor thermodynamic engine.
 
 ## Citation
 

@@ -2,11 +2,10 @@ module Oligos
 include("utils.jl")
 
 using Statistics
-
 export AbstractOligo, AbstractDegen, AbstractGapped
 export Oligo, DegenOligo, GappedOligo, OligoView
 export oligo_range, description
-export NonDegenIterator, nondegens
+export NonDegenIterator, GappedNonDegenIterator, nondegens
 export hasgaps, getgaps, n_deg_pos, n_unique_oligos
 export sampleChar, sampleView, sampleNondeg, sample_max_gc, sample_min_gc
 export unfolded_proportion
@@ -133,6 +132,10 @@ struct GappedOligo <: AbstractGapped
 
         return new(parent_oligo, gaps, total_len)
     end
+
+    function GappedOligo(parent_oligo::DegenOligo, gaps::Vector{Pair{Int,Int}}, total_length::Int)
+        new(parent_oligo, gaps, total_length)
+    end
 end
 
 """
@@ -159,6 +162,17 @@ struct NonDegenIterator{T<:AbstractOligo}
     oligo::T
     n_variants::Integer
     NonDegenIterator(o::T) where T<:AbstractOligo = new{T}(o, n_unique_oligos(o))
+end
+
+"""
+    GappedNonDegenIterator
+
+Iterate over all unique non-degenerate sequences represented by a gapped oligomer, preserving gap positions.
+"""
+struct GappedNonDegenIterator
+    parent_iter::NonDegenIterator{DegenOligo}
+    gaps::Vector{Pair{Int, Int}}
+    total_length::Int
 end
 
 
@@ -206,6 +220,17 @@ end
 Base.length(iter::NonDegenIterator) = iter.n_variants
 Base.eltype(::Type{<:NonDegenIterator}) = Oligo
 Base.parent(ndi::NonDegenIterator) = ndi.oligo
+
+Base.length(iter::GappedNonDegenIterator) = length(iter.parent_iter)
+Base.eltype(::Type{GappedNonDegenIterator}) = GappedOligo
+
+function Base.iterate(iter::GappedNonDegenIterator, state...)
+    res = iterate(iter.parent_iter, state...)
+    isnothing(res) && return nothing
+    oligo, next_state = res
+    gapped_oligo = GappedOligo(DegenOligo(oligo), iter.gaps, iter.total_length)
+    return gapped_oligo, next_state
+end
 
 
 
@@ -481,12 +506,14 @@ Return an iterator over all unique non-degenerate sequences represented by the o
 
 For non-degenerate sequences, return a tuple containing the sequence itself.
 
-See also [`NonDegenIterator`](@ref), [`sampleNondeg`](@ref).
+See also [`NonDegenIterator`](@ref), [`GappedNonDegenIterator`](@ref), [`sampleNondeg`](@ref).
 """
 nondegens(oligo::Oligo) = isempty(oligo) ? Tuple{}() : (oligo,)
-nondegens(go::GappedOligo) = hasgaps(go) ?
-    error("Cannot iterate over sequence with gaps") :
-    nondegens(DegenOligo(go))
+
+function nondegens(go::GappedOligo)
+    isempty(parent(go)) && return ()
+    return GappedNonDegenIterator(NonDegenIterator(parent(go)), go.gaps, go.total_length)
+end
 
 nondegens(deg::DegenOligo) = n_deg_pos(deg) == 0 ?
     nondegens(Oligo(deg)) :

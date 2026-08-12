@@ -2,7 +2,7 @@ module Primers
 
 export AbstractPrimer
 export Primer
-export construct_primers, best_pairs
+export construct_primers, best_pairs, export_evrogen
 
 using ..Oligos
 using ..Alignments
@@ -181,7 +181,7 @@ function construct_primers(
     L = length(msa)
     base_count = get_base_count(msa)
     prog = Progress(length(length_range);
-        desc=is_forward ? "Constructing F..." : "Constructing R...",
+        desc=rpad(is_forward ? "Constructing F..." : "Constructing R...", 25),
         color=:white,
         barlen=10
     )
@@ -286,7 +286,7 @@ function best_pairs(
     all(root(p.msa) == anymsa for p in forwards) || throw(ArgumentError("All primers must refer to the same MSA"))
     all(root(p.msa) == anymsa for p in reverses) || throw(ArgumentError("All primers must refer to the same MSA"))
     
-    @showprogress desc="Matching primer pairs..." enabled=(length(forwards)>1000) barlen=10 for f in forwards
+    @showprogress desc=rpad("Matching primer pairs...", 25) enabled=(length(forwards)>1000) barlen=10 for f in forwards
         for r in reverses
             if f.pos.stop >= r.pos.start
                 # overlapping primers
@@ -325,5 +325,6 @@ end
 Base.convert(::Type{Pair{Primer}}, p::Pair{<:AbstractPrimer, <:AbstractPrimer}) = p
 
 include("show_primers.jl")
+include("export_primers.jl")
 
 end # module

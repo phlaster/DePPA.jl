@@ -16,6 +16,7 @@ function rolg(::Type{GappedOligo}, len)
     end
     return GappedOligo(seq, rdesc())
 end
+
 @testset "Types" begin
     @test Oligo <: AbstractOligo <: AbstractString
     @test DegenOligo <: AbstractDegen <: AbstractOligo
@@ -188,9 +189,6 @@ end
     @test Set(String.(nondeg_iter)) == Set(["ACA", "ACC", "ACG", "ACT"])
     @test all(description(o) == "Non-degen sample from: test" for o in nondeg_iter)
     
-    gapped_deg = GappedOligo("A-N-", "test")
-    @test_throws ErrorException nondegens(gapped_deg)
-    
     gapped_nogaps_deg = GappedOligo("AANC", "test")
     nondeg_iter = collect(nondegens(gapped_nogaps_deg))
     @test length(nondeg_iter) == 4
@@ -204,6 +202,39 @@ end
         @test length(nd_iter) == n_unique_oligos(deg)
         @test length(collect(nd_iter)) == n_unique_oligos(deg)
     end
+end
+
+@testset "Gapped Non-Degenerate Iteration" begin
+    @test isempty(collect(nondegens(GappedOligo(""))))
+    
+    gapped_nogaps = GappedOligo("ACN", "test")
+    nondeg_iter = collect(nondegens(gapped_nogaps))
+    @test length(nondeg_iter) == 4
+    @test Set(String.(nondeg_iter)) == Set(["ACA", "ACC", "ACG", "ACT"])
+    @test all(o isa GappedOligo for o in nondeg_iter)
+    
+    gapped_deg = GappedOligo("A-N-", "test")
+    gapped_iter = collect(nondegens(gapped_deg))
+    @test length(gapped_iter) == 4
+    expected = ["A-A-", "A-C-", "A-G-", "A-T-"]
+    @test Set(String.(gapped_iter)) == Set(expected)
+    @test all(o isa GappedOligo for o in gapped_iter)
+    @test all(hasgaps(o) for o in gapped_iter)
+    
+    for o in gapped_iter
+        @test o.gaps == gapped_deg.gaps
+        @test length(o) == length(gapped_deg)
+    end
+    
+    complex_gapped = GappedOligo("-R-S-", "test")
+    # R -> A, G
+    # S -> C, G
+    # Expected: -A-C-, -A-G-, -G-C-, -G-G-
+    complex_iter = collect(nondegens(complex_gapped))
+    @test length(complex_iter) == 4
+    expected_complex = ["-A-C-", "-A-G-", "-G-C-", "-G-G-"]
+    @test Set(String.(complex_iter)) == Set(expected_complex)
+    @test all(o.gaps == complex_gapped.gaps for o in complex_iter)
 end
 
 @testset "Sampling Functions" begin
@@ -296,4 +327,35 @@ end
             @test ncodeunits(oligo) == len
         end
     end
+end
+
+@testset "Show Methods for Oligos" begin
+    # Oligo
+    o = Oligo("ACGT", "desc1")
+    @test occursin("Oligo(\"ACGT\", len=4, desc=\"desc1\")", sprint(show, o))
+    @test occursin("Oligo", sprint((io, x) -> show(io, MIME"text/plain"(), x), o))
+    @test occursin("Sequence: ACGT", sprint((io, x) -> show(io, MIME"text/plain"(), x), o))
+    
+    # Truncated Oligo
+    long_o = Oligo("ACGTACGTACGTACGTACGTACGT", "long")
+    @test occursin("ACGTACGTACGTACGTA...", sprint(show, long_o))
+    
+    # DegenOligo
+    d = DegenOligo("ACGTN", "desc2")
+    @test occursin("DegenOligo(\"ACGTN\", len=5, n_deg=1, vars=4, desc=\"desc2\")", sprint(show, d))
+    @test occursin("Degenerate positions: 1", sprint((io, x) -> show(io, MIME"text/plain"(), x), d))
+    @test occursin("Unique variants: 4", sprint((io, x) -> show(io, MIME"text/plain"(), x), d))
+    
+    # GappedOligo
+    g = GappedOligo("A-C-G", "desc3")
+    @test occursin("GappedOligo(\"A-C-G\", len=5, gaps=2, desc=\"desc3\")", sprint(show, g))
+    @test occursin("Gapped sequence: A-C-G", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    @test occursin("Length (with gaps): 5", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    @test occursin("Gaps: 2", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    
+    # OligoView
+    v = o[2:4]
+    @test occursin("OligoView(\"CGT\", len=3, range=2:4, desc=\"desc1\")", sprint(show, v))
+    @test occursin("Viewed sequence: CGT", sprint((io, x) -> show(io, MIME"text/plain"(), x), v))
+    @test occursin("Range: 2:4", sprint((io, x) -> show(io, MIME"text/plain"(), x), v))
 end
