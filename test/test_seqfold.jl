@@ -84,6 +84,10 @@ Random.seed!(42)
         samp_dg = SeqFold.dg(deg_large; max_samples=100, mode=:average)
         @test samp_dg isa Float64
         @test !isnan(samp_dg)
+        
+        samp_dg_worst = SeqFold.dg(deg_large; max_samples=100, mode=:worstcase)
+        @test samp_dg_worst isa Float64
+        @test !isnan(samp_dg_worst)
     end
 
     @testset "Melting Temperature (tm)" begin
