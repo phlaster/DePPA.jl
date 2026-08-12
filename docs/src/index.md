@@ -9,6 +9,7 @@
 - **Strict Oligonucleotide Typing:** Distinct, type-stable structures for pure, degenerate, and gapped sequences, with zero-allocation sequence slicing.
 - **MSA Analysis:** Efficient parsing of FASTA alignments, calculation of position-specific metrics (depth, determinacy), and generation of consensus sequences. Includes a customizable terminal viewer.
 - **Thermodynamic Primer Design:** Automated MSA scanning and multi-criteria filtering. Primers are evaluated based on the statistical distribution of $T_m$ and $\Delta G$ across their degenerate variants.
+- **Specificity Filtering:** Evaluates candidate primers against the input MSA to reject off-target binding sites, using a probabilistic threshold (`offtarget_reject_threshold`) for both forward and reverse complement matches.
 - **Lazy Thermodynamic Engine:** Core alignment and sequence manipulation requires no external dependencies. Nearest-neighbor (NN) thermodynamic calculations are seamlessly integrated via a Julia Extension linking to SeqFold.jl, loading the heavy dependencies only when required.
 
 ## Installation
@@ -35,20 +36,15 @@ First, we define a small set of unaligned sequences in memory and write them to 
 
 ```julia
 julia> data = """>1
-              GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGCCGAAGCCCTG
-              GCCGCCAAGCTCAATTCGAAGCTCATTCACTTCGTGCCGCGCGAC
-              >2
-              CATTTGCAACGAGCGTCAGACCGACCGCGAACTCGACCTGGCCGAAGCGCTG
-              GCTGCCAAACTCAATTCTAAGCTCATCCACTTCGTGCCACGC
-              >3
-              CATTTGTAACGAGCGTCAGACCGACCGTGAACTCGACCTCGCCGAAGCGCTG
-              GCTGCCAAACTCAATTCCAAGCTCATCCACTTCGTGCCACGCGACAA
-              >4
-              CTGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCC
-              GCCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA
-              >5
-              TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCCG
-              CCAAGCTCAATTCGAAGCTCATTCACTTTGTGCCGCGCGACAACA""";
+               GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGCCGAAGCCCTGGCCGCCAAGCTCAATTCGAAGCTCATTCAC
+               >2
+               CATTTGCAACGAGCGTCAGACCGACCGCGAACTCGACCTGGCCGAAGCGCTGGCTGCCAAACTCAATTCTAAGCTCATC
+               >3
+               CATTTGTAACGAGCGTCAGACCGACCGTGAACTCGACCTCGCCGAGCTGCCAAACTCAATTCCAAGCTCATCCACTT
+               >4
+               CTGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTTG
+               >5
+               TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTAG""";
 
 julia> temp_file = tempname(); open(temp_file, "w") do f write(f, data) end;
 ```
@@ -57,24 +53,24 @@ Next, we construct an `MSA` object. Passing `mafft=true` triggers the MAFFT engi
 
 ```julia
 julia> alignment = MSA(temp_file; mafft=true)
-MSA with 5 sequences of length 101:
-   -ATTTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAA…
-1 >G..C.....T.................C....................C..........................…
-2 >C.....C........T...........C...C.C.....G..............T.....A........T.....…
-3 >C..............T...........T...C.C....................T.....A........C.....…
-4 >.--C.................T....................T................................…
-5 >.---.................T....................T................................…
-   1        ⋅         ⋅         ⋅         ⋅         ⋅         ⋅         ⋅   75
+MSA with 5 sequences of length 86:
+   CATCTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTT--
+1 >G..C.....T.................C....................C.................................----
+2 >C.....C........T...........C...C.C.....G..............T.....A........T........C-------
+3 >C..............T...........T...C.C...........-------..T.....A........C........C.....--
+4 >---C.................T....................T.........................................TG
+5 >----.................T....................T.........................................AG
+   1        ·         ·         ·         ·         ⌢         ·         ·         ·    86
 ```
 
-Now we generate candidate primers. The `construct_primers` function scans the alignment, filters candidates based on GC content, $T_m$, and $\Delta G$ distributions, and returns a list of valid primers. We do this for both forward (`is_forward=true`) and reverse (`is_forward=false`) primers.
+Now we generate candidate primers. The `construct_primers` function scans the alignment, filters candidates based on GC content, $T_m$, $\Delta G$ distributions, and specificity (off-target binding within the MSA). We do this for both forward (`is_forward=true`) and reverse (`is_forward=false`) primers.
 
 ```julia
 julia> fwd = construct_primers(alignment); first(fwd)
 Constructing F... 100%|██████████| Time: 0:00:01
 Forward degenerate primer with 2 deg. positions
-                                             \50:66>
-|==============================================================================101|
+                                                           \50:66>
+|=====================================================================================86|
 
   Sequence: CTGGCYGCCAARCTCAA
   Length: 17
@@ -89,8 +85,8 @@ julia> rev = construct_primers(alignment; is_forward=false); first(rev)
 Constructing R... 100%|██████████| Time: 0:00:00
 Reverse degenerate primer with 2 deg. positions
 
-|==============================================================================101|
-                                 <50:66\
+|=====================================================================================86|
+                                           <50:66\
   Sequence: TTGAGYTTGGCRGCCAG
   Length: 17
   Positions: 50:66
@@ -106,9 +102,16 @@ Finally, we pair the forward and reverse primers. `best_pairs` matches primers b
 ```julia
 julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
 PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
-              >_________________51bp_________________<                             
-|==============================================================================101|
+                  >______________________51bp______________________<                     
+|=====================================================================================86|
 Forward: AGACYGACCGHGAAYTMGACCT at 18:39
 Reverse: AATTGAGYTTGGCRGCCA at 51:68
 Tm: 55.8±0.1 °C
+```
+
+You can then easily export your designed primers for ordering:
+
+```julia
+julia> export_evrogen("primers.txt", bp[1:2])
+"primers.txt"
 ```

@@ -124,9 +124,78 @@ Oligos.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
 Oligos.oligo_range(primer::AbstractPrimer) = primer.pos
 
 """
+    _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, target_interval::UnitRange{Int}; min_identity::Float64=0.8) -> Bool
+
+Check if a degenerate primer sequence has high-probability matches outside the target interval in the MSA.
+Evaluates both forward and reverse complement orientations.
+"""
+function _has_nonspecific_match(
+    primer_seq::AbstractString,
+    msa::AbstractMSA,
+    target_interval::UnitRange{Int};
+    min_identity::Float64=0.8
+)::Bool
+    plen = length(primer_seq)
+    L = width(msa)
+    plen > L && return false
+    
+    p_oligo = Oligos.DegenOligo(primer_seq)
+    rc_oligo = _ext_revcomp(p_oligo)
+    rc_seq = String(rc_oligo)
+    
+    threshold = plen * min_identity
+    
+    # Local function to slide a sequence over the MSA base count matrix
+    function _check_seq(seq::AbstractString)
+        for startpos in 1:(L - plen + 1)
+            # Skip if the window overlaps with the target interval
+            window_end = startpos + plen - 1
+            if startpos <= target_interval.stop && window_end >= target_interval.start
+                continue
+            end
+            
+            match_score = 0.0
+            valid = true
+            
+            for j in 1:plen
+                col_idx = startpos + j - 1
+                col_probs = get_base_count(msa, col_idx)
+                
+                # Skip windows with significant gaps (depth < 0.5)
+                if sum(col_probs) < 0.5
+                    valid = false
+                    break
+                end
+                
+                p_char = seq[j]
+                p_probs = get(Oligos.IUPAC_PROBS, p_char, (0.0, 0.0, 0.0, 0.0))
+                
+                # Accumulate probability of match
+                match_score += sum(p_probs .* col_probs)
+                
+                # Early exit if max possible score is below threshold
+                if match_score + (plen - j) < threshold
+                    valid = false
+                    break
+                end
+            end
+            
+            if valid && match_score >= threshold
+                return true
+            end
+        end
+        return false
+    end
+    
+    # Check both forward primer binding (reverse complement match) 
+    # and reverse primer binding (forward match)
+    return _check_seq(primer_seq) || _check_seq(rc_seq)
+end
+
+"""
     construct_primers(msa::AbstractMSA; kwargs...) -> Vector{Primer{DegenOligo}}
 
-Construct a list of candidate primers from an MSA based on thermodynamic and conservation filters.
+Construct a list of candidate primers from an MSA based on thermodynamic, conservation, and specificity filters.
 
 # Arguments
 - `msa::AbstractMSA`: The multiple sequence alignment.
@@ -145,6 +214,7 @@ Construct a list of candidate primers from an MSA based on thermodynamic and con
 - `tm_conf_int::Real=0.2`: Confidence interval for Tm.
 - `tm_conds=:pcr`: Thermodynamic conditions for Tm calculation.
 - `dg_temp::Real=mean(tm_range)`: Temperature for ΔG calculation.
+- `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding within the MSA. If a candidate primer matches another region in the MSA with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations.
 
 # Returns
 - `Vector{Primer{DegenOligo}}`: A list of valid candidate primers.
@@ -167,7 +237,8 @@ function construct_primers(
     max_samples::Int=5000,
     tm_conf_int::Real=0.2,
     tm_conds=:pcr,
-    dg_temp::Real=mean(tm_range)
+    dg_temp::Real=mean(tm_range),
+    offtarget_reject_threshold::Real=0.75
 )::Vector{Primer{DegenOligo}}
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
@@ -176,6 +247,7 @@ function construct_primers(
     0 ≤ tail_length ≤ minimum(length_range) || throw(ArgumentError("tail_length must be [0, length_range.start]"))
     0 ≤ gc_range.start ≤ gc_range.stop ≤ 100 || throw(ArgumentError("gc_range must be in [0, 100]"))
     0 ≤ tm_range.start ≤ tm_range.stop ≤ 100 || throw(ArgumentError("tm_range must be in [0, 100]"))
+    0 ≤ offtarget_reject_threshold ≤ 1 || throw(ArgumentError("offtarget_reject_threshold must be in [0,1]"))
     
     primers = Primer{DegenOligo}[]
     L = length(msa)
@@ -219,8 +291,14 @@ function construct_primers(
             end
 
             _cons = consensus_degen(msa, interval; slack=slack)
+            hasgaps(_cons) && continue
+            
+            cons_str = String(parent(_cons))
+            if _has_nonspecific_match(cons_str, msa, interval; min_identity=offtarget_reject_threshold)
+                continue
+            end
+            
             gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
-            hasgaps(gapped_cons) && continue
             
             cons = DegenOligo(gapped_cons)
             n_unique_oligos(cons) > max_oligo_variants && continue
