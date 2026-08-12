@@ -83,8 +83,8 @@ struct MSA <: AbstractMSA
         isempty(seqs) && return new(GappedOligo[], zeros(4, 0), bootstrap)
 
         base_count = _bootstrap_base_counts(seqs, bootstrap;
-            progress_label="Bootstrap, $bootstrap it.",
-            barlen=19
+            progress_label=rpad("Bootstrap, $bootstrap it.", 25), 
+            barlen=10
         )
         gapped_seqs = GappedOligo.(seqs)
         return new(gapped_seqs, base_count, bootstrap)
