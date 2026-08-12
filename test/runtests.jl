@@ -20,9 +20,8 @@ Random.seed!(42)
 
     # New
     @testset "Real pipeline" include("test_pipeline.jl")
+    @testset "Show methods" include("test_show.jl")
 
-
-    # @testset "SeqFold methods" include("test_seqfold.jl")
-
-
+    # SeqFold extension tests
+    @testset "SeqFold methods" include("test_seqfold.jl")
 end

@@ -16,6 +16,7 @@ function rolg(::Type{GappedOligo}, len)
     end
     return GappedOligo(seq, rdesc())
 end
+
 @testset "Types" begin
     @test Oligo <: AbstractOligo <: AbstractString
     @test DegenOligo <: AbstractDegen <: AbstractOligo
@@ -326,4 +327,35 @@ end
             @test ncodeunits(oligo) == len
         end
     end
+end
+
+@testset "Show Methods for Oligos" begin
+    # Oligo
+    o = Oligo("ACGT", "desc1")
+    @test occursin("Oligo(\"ACGT\", len=4, desc=\"desc1\")", sprint(show, o))
+    @test occursin("Oligo", sprint((io, x) -> show(io, MIME"text/plain"(), x), o))
+    @test occursin("Sequence: ACGT", sprint((io, x) -> show(io, MIME"text/plain"(), x), o))
+    
+    # Truncated Oligo
+    long_o = Oligo("ACGTACGTACGTACGTACGTACGT", "long")
+    @test occursin("ACGTACGTACGTACGTA...", sprint(show, long_o))
+    
+    # DegenOligo
+    d = DegenOligo("ACGTN", "desc2")
+    @test occursin("DegenOligo(\"ACGTN\", len=5, n_deg=1, vars=4, desc=\"desc2\")", sprint(show, d))
+    @test occursin("Degenerate positions: 1", sprint((io, x) -> show(io, MIME"text/plain"(), x), d))
+    @test occursin("Unique variants: 4", sprint((io, x) -> show(io, MIME"text/plain"(), x), d))
+    
+    # GappedOligo
+    g = GappedOligo("A-C-G", "desc3")
+    @test occursin("GappedOligo(\"A-C-G\", len=5, gaps=2, desc=\"desc3\")", sprint(show, g))
+    @test occursin("Gapped sequence: A-C-G", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    @test occursin("Length (with gaps): 5", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    @test occursin("Gaps: 2", sprint((io, x) -> show(io, MIME"text/plain"(), x), g))
+    
+    # OligoView
+    v = o[2:4]
+    @test occursin("OligoView(\"CGT\", len=3, range=2:4, desc=\"desc1\")", sprint(show, v))
+    @test occursin("Viewed sequence: CGT", sprint((io, x) -> show(io, MIME"text/plain"(), x), v))
+    @test occursin("Range: 2:4", sprint((io, x) -> show(io, MIME"text/plain"(), x), v))
 end
