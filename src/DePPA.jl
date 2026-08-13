@@ -12,8 +12,9 @@ DePPA
 
 export Oligos, Primers, Alignments
 
-
 include("utils.jl")
+using .Utils
+
 include("Oligos.jl")
 include("Alignments.jl")
 include("Primers.jl")

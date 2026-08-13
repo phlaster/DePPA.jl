@@ -4,7 +4,7 @@ export AbstractPrimer
 export Primer
 export construct_primers, best_pairs, export_evrogen
 export miniblast, MiniBlastHit
-export add_illumina_adapters, annotate
+export add_illumina_adapters, reannotated
 export setAdapters!, getAdapters
 
 using ..Oligos
@@ -13,22 +13,10 @@ using ..Alignments
 using ProgressMeter
 using Statistics
 
-const ILLUMINA_NEXTERA_ADAPT_F = Oligo(
-    "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG",
-    "Illumina Nextera Transposase Read 1 (P5)",
-)
-const ILLUMINA_NEXTERA_ADAPT_R = Oligo(
-    "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG",
-    "Illumina Nextera Transposase Read 2 (P7)",
-)
-const PREDEFINED_ADAPTERS = Dict{Symbol, Pair{Oligo, Oligo}}(
-    :nextera => ILLUMINA_NEXTERA_ADAPT_F => ILLUMINA_NEXTERA_ADAPT_R,
-)
 const GLOBAL_ADAPTERS = Ref{Union{Nothing, Pair{Oligo, Oligo}}}(nothing)
 
 """
     setAdapters!() -> Nothing
-    setAdapters!(name::Symbol) -> Nothing
     setAdapters!(adapters::Pair{<:Oligo}) -> Nothing
     setAdapters!(adapters::Pair{<:AbstractString}) -> Nothing
 
@@ -37,7 +25,6 @@ during `construct_primers`.
 
 # Arguments
 - `()`: Resets the global adapters to `nothing` (no adapters will be added).
-- `name::Symbol`: Uses a predefined set of adapters (e.g., `:nextera` for Illumina Nextera).
 - `adapters::Pair{<:Oligo, <:Oligo}`: A custom pair of valid `Oligo` sequences.
 - `adapters::Pair{<:AbstractString, <:AbstractString}`: A custom pair of strings (will be converted to `Oligo`).
 
@@ -48,16 +35,6 @@ the adapter worsens ΔG by more than `max_dg_drop`.
 """
 function setAdapters!()
     GLOBAL_ADAPTERS[] = nothing
-    return nothing
-end
-
-function setAdapters!(name::Symbol)
-    if !haskey(PREDEFINED_ADAPTERS, name)
-        throw(ArgumentError(
-            "Unknown adapter set: :$name. Available: $(keys(PREDEFINED_ADAPTERS))",
-        ))
-    end
-    GLOBAL_ADAPTERS[] = PREDEFINED_ADAPTERS[name]
     return nothing
 end
 
@@ -258,8 +235,8 @@ function Primer(
 end
 
 """
-    annotate(primer::AbstractPrimer, annotation::AbstractString) -> Primer
-    annotate(pair::Pair{<:AbstractPrimer, <:AbstractPrimer}, annotation::AbstractString) -> Pair{Primer}
+    reannotated(primer::AbstractPrimer, annotation::AbstractString) -> Primer
+    reannotated(pair::Pair{<:AbstractPrimer, <:AbstractPrimer}, annotation::AbstractString) -> Pair{Primer}
 
 Create a new primer (or primer pair) with the updated description (annotation).
 Since Julia structs are immutable, a new object is returned rather than mutating the existing one in-place.
@@ -271,7 +248,7 @@ Since Julia structs are immutable, a new object is returned rather than mutating
 # Returns
 - A new `Primer` or `Pair{Primer, Primer}` with the updated description.
 """
-function annotate(primer::Primer{T}, annotation::AbstractString) where {T}
+function reannotated(primer::Primer{T}, annotation::AbstractString) where {T}
     new_consensus = T(String(primer.consensus), String(annotation))
 
     return Primer{T}(
@@ -288,11 +265,11 @@ function annotate(primer::Primer{T}, annotation::AbstractString) where {T}
     )
 end
 
-function annotate(
+function reannotated(
     pair::Pair{<:AbstractPrimer, <:AbstractPrimer},
     annotation::AbstractString,
 )
-    return annotate(pair.first, annotation) => annotate(pair.second, annotation)
+    return reannotated(pair.first, annotation) => reannotated(pair.second, annotation)
 end
 
 # These are overloaded in ext/SeqFoldExt.jl to load SeqFold.jl library dynamically
@@ -513,6 +490,10 @@ Construct a list of candidate primers from an MSA based on thermodynamic, conser
 - `tm_conds=:pcr`: Thermodynamic conditions for Tm calculation.
 - `dg_temp::Real=mean(tm_range)`: Temperature for ΔG calculation.
 - `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding within the MSA. If a candidate primer matches another region in the MSA with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations.
+- `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
+  - If `nothing` or `offset == 0`, constructs primers across the entire MSA.
+  - If `offset < 0`, constructs primers strictly inside the flanking pair's amplicon boundaries, shrunk by the absolute value of the offset.
+  - If `offset > 0`, constructs forward primers upstream of the flanking amplicon (with the given offset) and reverse primers downstream.
 
 # Returns
 - `Vector{Primer{DegenOligo}}`: A list of valid candidate primers.
@@ -538,6 +519,10 @@ function construct_primers(
     dg_temp::Real = mean(tm_range),
     offtarget_reject_threshold::Real = 0.75,
     max_dg_drop::Real = 1.0,
+    nested_pair::Union{
+        Nothing,
+        Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int},
+    } = nothing,
 )::Vector{Primer{DegenOligo}}
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
@@ -556,6 +541,70 @@ function construct_primers(
     primers = Primer{DegenOligo}[]
     L = length(msa)
     base_count = get_base_count(msa)
+
+    search_start::Int = 1
+    search_end::Int = L
+
+    if nested_pair !== nothing
+        flanking_pair, offset = nested_pair
+        amp_start = flanking_pair.first.pos.start
+        amp_stop = flanking_pair.second.pos.stop
+
+        1 <= amp_start <= amp_stop <= L ||
+            throw(ArgumentError(
+                "Flanking pair positions ($amp_start:$amp_stop) are out of MSA bounds (1:$L)",
+            ))
+
+        if offset < 0
+            search_start = amp_start - offset
+            search_end = amp_stop + offset
+
+            if search_start > search_end
+                throw(ArgumentError(
+                    "Nested offset ($offset) is too large, leaving no valid region between $search_start and $search_end",
+                ))
+            end
+            if search_start < 1 || search_end > L
+                throw(ArgumentError(
+                    "Nested search bounds ($search_start:$search_end) exceed MSA boundaries (1:$L)",
+                ))
+            end
+            if search_end - search_start + 1 < minimum(length_range)
+                throw(ArgumentError(
+                    "Nested region length ($(search_end - search_start + 1)) is smaller than minimum primer length ($(minimum(length_range)))",
+                ))
+            end
+        elseif offset > 0
+            if is_forward
+                search_start = 1
+                search_end = amp_start - offset
+                if search_end < 1
+                    throw(ArgumentError(
+                        "Not enough space upstream of the flanking amplicon (amp_start=$amp_start) to construct outer forward primers with offset $offset",
+                    ))
+                end
+                if search_end - search_start + 1 < minimum(length_range)
+                    throw(ArgumentError(
+                        "Not enough space upstream to construct outer forward primers. Available: $(search_end - search_start + 1)bp, Min primer length: $(minimum(length_range))",
+                    ))
+                end
+            else
+                search_start = amp_stop + offset
+                search_end = L
+                if search_start > L
+                    throw(ArgumentError(
+                        "Not enough space downstream of the flanking amplicon (amp_stop=$amp_stop) to construct outer reverse primers with offset $offset",
+                    ))
+                end
+                if search_end - search_start + 1 < minimum(length_range)
+                    throw(ArgumentError(
+                        "Not enough space downstream to construct outer reverse primers. Available: $(search_end - search_start + 1)bp, Min primer length: $(minimum(length_range))",
+                    ))
+                end
+            end
+        end
+    end
+
     prog = Progress(
         length(length_range);
         desc = rpad(is_forward ? "Constructing F…" : "Constructing R…", 20),
@@ -570,7 +619,14 @@ function construct_primers(
         head_len = len - tail_len
         head_len < 0 && continue
 
-        for startpos in 1:(L - len + 1)
+        actual_search_start = max(1, search_start)
+        actual_search_end = min(L - len + 1, search_end - len + 1)
+
+        if actual_search_start > actual_search_end
+            continue
+        end
+
+        for startpos in actual_search_start:actual_search_end
             interval::UnitRange{Int} = startpos:(startpos + len - 1)
             depths = msadepth(msa, interval)
             any(<(min_msadepth), depths) && continue
@@ -675,7 +731,8 @@ end
 """
     best_pairs(forwards::Vector{<:Primer}, reverses::Vector{<:Primer};
         amplicon_len::UnitRange{Int}=0:9999,
-        max_tm_diff::Real=4.0
+        max_tm_diff::Real=4.0,
+        nested_pair=nothing
     ) -> Vector{Pair{Primer{DegenOligo}}}
 
 Find the best matching pairs of forward and reverse primers.
@@ -685,6 +742,10 @@ Find the best matching pairs of forward and reverse primers.
 - `reverses::Vector{<:Primer}`: A list of reverse primers.
 - `amplicon_len::UnitRange{Int}=0:9999`: Allowed range for the total amplicon length.
 - `max_tm_diff::Real=4.0`: Maximum allowed difference in mean Tm between forward and reverse primers.
+- `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
+  - If `nothing` or `offset == 0`, performs normal pairing.
+  - If `offset < 0`, only pairs entirely inside the flanking pair's amplicon (minus the offset margin) are considered.
+  - If `offset > 0`, only pairs with the forward primer upstream and reverse primer downstream of the flanking amplicon (plus the offset margin) are considered.
 
 # Returns
 - `Vector{Pair{Primer{DegenOligo}}}`: A sorted list of valid primer pairs, ordered by the smallest difference in mean Tm.
@@ -696,6 +757,10 @@ function best_pairs(
     reverses::Vector{<:Primer};
     amplicon_len::UnitRange{Int} = 0:9999,
     max_tm_diff::Real = 4.0,
+    nested_pair::Union{
+        Nothing,
+        Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int},
+    } = nothing,
 )::Vector{Pair{Primer{DegenOligo}, Primer{DegenOligo}}}
     pairs = Pair{Primer{DegenOligo}, Primer{DegenOligo}}[]
     (isempty(forwards) || isempty(reverses)) && return pairs
@@ -711,6 +776,61 @@ function best_pairs(
     all(root(p.msa) == anymsa for p in reverses) ||
         throw(ArgumentError("All primers must refer to the same MSA"))
 
+    L = length(anymsa)
+    use_nested = false
+    nested_amp_start = 0
+    nested_amp_stop = 0
+    nested_offset = 0
+
+    if nested_pair !== nothing
+        flanking_pair, offset = nested_pair
+
+        if root(flanking_pair.first.msa) != anymsa ||
+                root(flanking_pair.second.msa) != anymsa
+            throw(ArgumentError("Flanking pair must refer to the same MSA as the primers"))
+        end
+
+        nested_amp_start = flanking_pair.first.pos.start
+        nested_amp_stop = flanking_pair.second.pos.stop
+        nested_offset = offset
+
+        1 <= nested_amp_start <= nested_amp_stop <= L ||
+            throw(ArgumentError(
+                "Flanking pair positions ($nested_amp_start:$nested_amp_stop) are out of MSA bounds (1:$L)",
+            ))
+
+        if nested_offset < 0
+            valid_start = nested_amp_start - nested_offset
+            valid_end = nested_amp_stop + nested_offset
+
+            valid_start > valid_end &&
+                throw(ArgumentError(
+                    "Nested offset ($nested_offset) is too large, leaving no valid region between $valid_start and $valid_end",
+                ))
+            (valid_start < 1 || valid_end > L) &&
+                throw(ArgumentError(
+                    "Nested search bounds ($valid_start:$valid_end) exceed MSA boundaries (1:$L)",
+                ))
+
+            if minimum(amplicon_len) > valid_end - valid_start + 1
+                throw(ArgumentError(
+                    "Specified minimum amplicon length ($(minimum(amplicon_len))) is larger than the available nested region ($(valid_end - valid_start + 1)bp)",
+                ))
+            end
+        elseif nested_offset > 0
+            min_theoretical_amplicon = (nested_amp_stop + nested_offset) -
+                (nested_amp_start - nested_offset) +
+                1
+            if maximum(amplicon_len) < min_theoretical_amplicon
+                throw(ArgumentError(
+                    "Specified amplicon_len max ($(maximum(amplicon_len))) is smaller than the minimum possible outer amplicon length ($min_theoretical_amplicon)",
+                ))
+            end
+        end
+
+        use_nested = true
+    end
+
     @showprogress desc = rpad("Paring…", 20) enabled = (
         length(forwards) > 1000
     ) barlen = 10 for f in forwards
@@ -725,9 +845,25 @@ function best_pairs(
             end
 
             amplicon = r.pos.stop - f.pos.start + 1
-            if amplicon in amplicon_len
-                push!(pairs, f => r)
+            if !(amplicon in amplicon_len)
+                continue
             end
+
+            if use_nested
+                if nested_offset < 0
+                    if f.pos.start < nested_amp_start - nested_offset ||
+                            r.pos.stop > nested_amp_stop + nested_offset
+                        continue
+                    end
+                elseif nested_offset > 0
+                    if f.pos.stop >= nested_amp_start - nested_offset ||
+                            r.pos.start <= nested_amp_stop + nested_offset
+                        continue
+                    end
+                end
+            end
+
+            push!(pairs, f => r)
         end
     end
 
