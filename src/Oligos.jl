@@ -391,6 +391,24 @@ Base.length(ov::OligoView) = length(oligo_range(ov))
 Base.isempty(oligo::AbstractOligo) = length(oligo) == 0
 Base.lastindex(oligo::AbstractOligo) = length(oligo)
 
+"""
+    Base.:*(a::T, b::S) where {T<:AbstractOligo, S<:AbstractOligo}
+
+Concatenate two oligomers. 
+Returns a degenerate or gapped oligo if either of the operands is degenerate or gapped, 
+otherwise returns a non-degenerate `Oligo`. Preserves and concatenates descriptions.
+"""
+function Base.:*(a::T, b::S) where {T<:AbstractOligo, S<:AbstractOligo}
+    new_seq = String(a) * String(b)
+    
+    da = description(a)
+    db = description(b)
+    new_desc = isempty(da) ? db : (isempty(db) ? da : da * "+" * db)
+    
+    OutType = promote_type(T, S)
+    return OutType(new_seq, new_desc)
+end
+
 function Base.convert(::Type{T}, o::AbstractOligo) where T<:AbstractOligo
     if T === typeof(o)
         return o
