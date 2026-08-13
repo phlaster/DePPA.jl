@@ -1,6 +1,6 @@
 function _show_primer_common(io::IO, primer::AbstractPrimer)
-    println(io, "  Sequence: ", primer.consensus)
-    println(io, "  Length: ", length(primer.consensus))
+    println(io, "  Sequence: ", String(primer))
+    println(io, "  Length: ", length(primer))
     println(io, "  Positions: ", primer.pos)
     println(io, "  Unique variants: ", n_unique_oligos(primer))
     println(io, "  Melting temperature: ", round(primer.tm.mean, digits=1), "°C (",
@@ -13,7 +13,7 @@ end
 
 function Base.show(io::IO, primer::AbstractPrimer)
     max_width = 15
-    seq = primer.consensus
+    seq = String(primer)
     seq_display = length(seq) > max_width ? seq[1:max_width-3] * "..." : seq
 
     dir_str = primer.is_forward ? "forward" : "reverse"
@@ -138,8 +138,14 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer})
         end
         println(io, join(arrow_line))
         println(io, bar)
-        println(io, "Forward: ", fwd.consensus, " at ", fwd.pos.start, ":", fwd.pos.stop)
-        println(io, "Reverse: ", rev.consensus, " at ", rev.pos.start, ":", rev.pos.stop)
+        f_desc = description(fwd)
+        r_desc = description(rev)
+        
+        f_str = isempty(f_desc) ? "" : " (" * (length(f_desc) > 12 ? first(f_desc, 12) * "…" : f_desc) * ")"
+        r_str = isempty(r_desc) ? "" : " (" * (length(r_desc) > 12 ? first(r_desc, 12) * "…" : r_desc) * ")"
+        
+        println(io, "Forward: ", String(fwd), " at ", fwd.pos.start, ":", fwd.pos.stop, f_str)
+        println(io, "Reverse: ", String(rev), " at ", rev.pos.start, ":", rev.pos.stop, r_str)
         mean_tm = (fwd.tm.mean + rev.tm.mean) / 2
         delta_tm = abs(fwd.tm.mean - rev.tm.mean) / 2
         print(io, "Tm: ", round(mean_tm, digits=1), "±", round(delta_tm, digits=1), " °C")

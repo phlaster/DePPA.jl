@@ -67,7 +67,7 @@ end
 function _write_evrogen!(io::IO, primers::AbstractVector{<:AbstractPrimer}; scale::Union{Real,AbstractString}=0.04)
     for (i, p) in enumerate(primers)
         name = _evrogen_name(p, i)
-        seq = String(p.consensus)
+        seq = String(p)
         println(io, "$name; $seq; $scale")
     end
     return nothing
@@ -77,11 +77,11 @@ function _write_evrogen!(io::IO, pairs::AbstractVector{<:Pair}; scale::Union{Rea
     idx = 1
     for pair in pairs
         name_f = _evrogen_name(pair.first, idx)
-        seq_f = String(pair.first.consensus)
+        seq_f = String(pair.first)
         println(io, "$name_f; $seq_f; $scale")
 
         name_r = _evrogen_name(pair.second, idx)
-        seq_r = String(pair.second.consensus)
+        seq_r = String(pair.second)
         println(io, "$name_r; $seq_r; $scale")
         
         idx += 1
