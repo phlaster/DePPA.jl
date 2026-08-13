@@ -5,18 +5,18 @@ const BASE_COLORS = Dict{Char, Symbol}(
     'C' => :blue,
     'G' => :yellow,
     'T' => :red,
-    'M' => :light_cyan,   # A/C
-    'R' => :light_green,  # A/G
-    'W' => :light_green,  # A/T
-    'S' => :light_blue,   # C/G
-    'Y' => :light_magenta,# C/T
-    'K' => :light_red,    # G/T
-    'V' => :cyan,         # A/C/G
-    'H' => :magenta,      # A/C/T
-    'D' => :green,        # A/G/T
-    'B' => :blue,         # C/G/T
+    'M' => :light_cyan, # A/C
+    'R' => :light_green, # A/G
+    'W' => :light_green, # A/T
+    'S' => :light_blue, # C/G
+    'Y' => :light_magenta, # C/T
+    'K' => :light_red, # G/T
+    'V' => :cyan, # A/C/G
+    'H' => :magenta, # A/C/T
+    'D' => :green, # A/G/T
+    'B' => :blue, # C/G/T
     'N' => :white,
-    '-' => :normal
+    '-' => :normal,
 )
 
 const HISTBARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -39,7 +39,7 @@ function setMSAShowStyle!(style::Symbol)
     else
         throw(ArgumentError(
             "Invalid MSA show style: :$style. " *
-            "Valid options are :bw, :polymorf, or :allcolors."
+                "Valid options are :bw, :polymorf, or :allcolors.",
         ))
     end
 end
@@ -62,7 +62,7 @@ function setMSAconsensusShowType!(style::Symbol)
     else
         throw(ArgumentError(
             "Invalid consensus show type: :$style. " *
-            "Valid options are :degen or :major."
+                "Valid options are :degen or :major.",
         ))
     end
 end
@@ -70,8 +70,9 @@ end
 function _consensus_char(msa::AbstractMSA, pos::Int, type::Symbol)
     if type == :major
         return consensus_major(msa, pos)
-    else  # :degen
-        return consensus_degen(msa, pos; slack=0.0)
+    else
+        # :degen
+        return consensus_degen(msa, pos; slack = 0.0)
     end
 end
 
@@ -112,7 +113,7 @@ function Base.show(io::IO, msa::AbstractMSA)
             trunc = processed_descs[i][1:min(end, desc_width)]
             padded_descs[i] = rpad(trunc, desc_width)
         end
-        desc_width += 2  # for separator
+        desc_width += 2 # for separator
     end
 
     max_display_width = max(20, terminal_width - desc_width - 7)
@@ -129,12 +130,12 @@ function Base.show(io::IO, msa::AbstractMSA)
 
     println(io, ":")
     has_desc && print(io, " "^desc_width)
-    
+
     style = MSA_SHOW_STYLE[]
-    
+
     safe_msa = msa
     if msa isa MSAView && !_is_full_height(msa)
-        safe_msa = MSA(msa; bootstrap=0)
+        safe_msa = MSA(msa; bootstrap = 0)
     end
 
     dot_chars = Vector{Char}(undef, length(displayed_cols_range))
@@ -163,7 +164,7 @@ function Base.show(io::IO, msa::AbstractMSA)
             header_char = _consensus_char(safe_msa, dj, con_type)
             if style == :polymorf
                 color = get(BASE_COLORS, header_char, :normal)
-                printstyled(io, header_char; color=color, reverse=true)
+                printstyled(io, header_char; color = color, reverse = true)
             else
                 print(io, header_char)
             end
@@ -176,13 +177,13 @@ function Base.show(io::IO, msa::AbstractMSA)
             bar_index = clamp(floor(Int, depth * 8) + 1, 1, 8)
             bar_char = HISTBARS[bar_index]
             color = get(BASE_COLORS, major_nuc, :normal)
-            printstyled(io, bar_char; color=color)
+            printstyled(io, bar_char; color = color)
         end
     end
 
     if needs_width_ellipsis
         if style == :allcolors || style == :polymorf
-            printstyled(io, "…"; color=:light_black, reverse=true)
+            printstyled(io, "…"; color = :light_black, reverse = true)
         else
             print(io, "…")
         end
@@ -198,26 +199,27 @@ function Base.show(io::IO, msa::AbstractMSA)
             c = getsequence(msa, i, dj)
             if style == :allcolors
                 col = get(BASE_COLORS, c, :normal)
-                printstyled(io, c; color=col, reverse=true)
+                printstyled(io, c; color = col, reverse = true)
             elseif style == :bw
                 if c == dot_chars[dj] && c != '-'
                     print(io, '.')
                 else
                     print(io, c)
                 end
-            else # :polymorf
+            else
+                # :polymorf
                 if c == dot_chars[dj] && c != '-'
                     print(io, '.')
                 else
                     col = get(BASE_COLORS, c, :normal)
-                    printstyled(io, c; color=col)
+                    printstyled(io, c; color = col)
                 end
             end
         end
-        
+
         if needs_width_ellipsis
             if style == :allcolors || style == :polymorf
-                printstyled(io, "…"; color=:light_black, reverse=true)
+                printstyled(io, "…"; color = :light_black, reverse = true)
             else
                 print(io, "…")
             end
@@ -232,7 +234,7 @@ function Base.show(io::IO, msa::AbstractMSA)
     has_desc && print(io, join(gap_below_seqnames))
 
     num_line_chars = fill(' ', length(displayed_cols_range))
-    
+
     start_num_str = string(first(abs_cols))
     start_num_len = length(start_num_str)
     if length(num_line_chars) >= start_num_len
@@ -242,7 +244,7 @@ function Base.show(io::IO, msa::AbstractMSA)
             end
         end
     end
-    
+
     end_num_str = string(last(abs_cols))
     end_num_len = length(end_num_str)
     if length(num_line_chars) >= end_num_len
@@ -253,7 +255,7 @@ function Base.show(io::IO, msa::AbstractMSA)
             end
         end
     end
-    
+
     @inbounds for (rel_idx, abs_pos) in enumerate(abs_cols)
         if abs_pos % 10 == 0 && num_line_chars[rel_idx] == ' '
             num_line_chars[rel_idx] = '·'
@@ -268,6 +270,6 @@ function Base.show(io::IO, msa::AbstractMSA)
             num_line_chars[rel_idx] = '∴'
         end
     end
-    
+
     print(io, String(num_line_chars))
 end

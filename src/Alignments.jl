@@ -14,25 +14,26 @@ export consensus_major, consensus_degen, dry_msa, nucleotide_diversity
 export setMSAShowStyle!, setMSAconsensusShowType!
 
 function _bootstrap_base_counts(
-    seqs::Vector{<:AbstractString}, 
+    seqs::Vector{<:AbstractString},
     bootstrap::Int;
-    progress_label::String, 
-    barlen::Int
+    progress_label::String,
+    barlen::Int,
 )
     n = length(seqs)
     L = length(first(seqs))
-    all(length(s) == L for s in seqs) || throw(ArgumentError("All sequences must have the same length"))
+    all(length(s) == L for s in seqs) ||
+        throw(ArgumentError("All sequences must have the same length"))
     base_count = zeros(4, L)
     if bootstrap > 0
-        @showprogress desc=progress_label barlen=barlen for b in 1:bootstrap
+        @showprogress desc = progress_label barlen = barlen for b in 1:bootstrap
             boot_rows = rand(1:n, n)
             boot_seqs = seqs[boot_rows]
-            
+
             Threads.@threads for j in 1:L
                 pos_counts = zeros(4)
                 for s in boot_seqs
                     c = uppercase(s[j])
-                    probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
+                    probs = get(IUPAC_PROBS, c, (0.0, 0.0, 0.0, 0.0))
                     pos_counts .+= probs
                 end
                 current_freq = pos_counts / n
@@ -44,7 +45,7 @@ function _bootstrap_base_counts(
             counts = zeros(4)
             for s in seqs
                 c = uppercase(s[j])
-                probs = get(IUPAC_PROBS, c, (.0,.0,.0,.0))
+                probs = get(IUPAC_PROBS, c, (0.0, 0.0, 0.0, 0.0))
                 counts .+= probs
             end
             base_count[:, j] = counts / n
@@ -77,15 +78,17 @@ struct MSA <: AbstractMSA
 
     If `bootstrap > 0`, compute base frequencies using bootstrap resampling.
     """
-    function MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
+    function MSA(seqs::Vector{<:AbstractString}; bootstrap::Int = 0, seed = nothing)
         bootstrap >= 0 || throw(ArgumentError("bootstrap must be non-negative"))
         isnothing(seed) || Random.seed!(seed)
 
         isempty(seqs) && return new(GappedOligo[], zeros(4, 0), bootstrap)
 
-        base_count = _bootstrap_base_counts(seqs, bootstrap;
-            progress_label=rpad("Bootstrap, $bootstrap it.", 20), 
-            barlen=10
+        base_count = _bootstrap_base_counts(
+            seqs,
+            bootstrap;
+            progress_label = rpad("Bootstrap, $bootstrap it.", 20),
+            barlen = 10,
         )
         gapped_seqs = GappedOligo.(seqs)
         return new(gapped_seqs, base_count, bootstrap)
@@ -102,7 +105,6 @@ struct MSAView <: AbstractMSA
     rows::UnitRange{Int}
     cols::UnitRange{Int}
 end
-
 
 _returnrows(m::AbstractMSA) = m
 _returnrows(m::MSAView) = MSAView(m.parent, 1:height(m.parent), m.cols)
@@ -129,9 +131,11 @@ bval(msav::MSAView) = root(msav).bootstrap
 
 function _align!(args...; kwargs...)
     # This is overloaded in ext/MAFFTExt.jl to load MAFFT_jll artifact dynamically
-    error("Alignment requires MAFFT_jll artifact to be loaded.\n" *
-          "In order to align your FASTAs, please `]add MAFFT_jll` to your project\n" *
-          "and load it with `using MAFFT_jll` before calling MSA with `mafft=true`.")
+    error(
+        "Alignment requires MAFFT_jll artifact to be loaded.\n" *
+            "In order to align your FASTAs, please `]add MAFFT_jll` to your project\n" *
+            "and load it with `using MAFFT_jll` before calling MSA with `mafft=true`.",
+    )
 end
 
 """
@@ -146,7 +150,13 @@ Construct an MSA from a FASTA file.
 - `bootstrap::Int=0`: Number of bootstrap iterations for base frequencies.
 - `seed=nothing`: Random seed for reproducibility.
 """
-function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, bootstrap::Int=0, seed=nothing)
+function MSA(
+    predicate::Function,
+    fasta::AbstractString;
+    mafft::Bool = false,
+    bootstrap::Int = 0,
+    seed = nothing,
+)
     fasta_content = Tuple{String, String}[]
     FastaReader(fasta) do fr
         counter = 0
@@ -164,7 +174,7 @@ function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, boot
             invalid_chars = setdiff(unique(upper_seq), collect(allowed_chars))
             throw(ArgumentError(
                 "Sequence '$desc' contains invalid characters: $(join(invalid_chars, ", ")).\\n" *
-                "Only $(join(collect(allowed_chars), ", ")) allowed when `mafft=$mafft`"
+                    "Only $(join(collect(allowed_chars), ", ")) allowed when `mafft=$mafft`",
             ))
         end
     end
@@ -172,7 +182,7 @@ function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, boot
     mafft && _align!(fasta_content)
 
     gapped_oligos = [GappedOligo(seq, desc) for (desc, seq) in fasta_content]
-    return MSA(gapped_oligos; bootstrap=bootstrap, seed=seed)
+    return MSA(gapped_oligos; bootstrap = bootstrap, seed = seed)
 end
 
 """
@@ -187,7 +197,7 @@ Construct an `MSA` from a FASTA file, including all sequences.
 # Returns
 - `MSA`: A new `MSA` object containing all sequences from the file.
 """
-MSA(fasta::AbstractString; kwargs...) = MSA(x->true, fasta; kwargs...)
+MSA(fasta::AbstractString; kwargs...) = MSA(x -> true, fasta; kwargs...)
 
 """
     MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
@@ -204,9 +214,9 @@ Construct a new concrete `MSA` by materializing the `MSAView` into a standalone 
 
 See also [`MSAView`](@ref).
 """
-function MSA(msav::MSAView; bootstrap::Int=0, seed=nothing)
+function MSA(msav::MSAView; bootstrap::Int = 0, seed = nothing)
     seqs = [getsequence(msav, i) for i in 1:nseqs(msav)]
-    return MSA(seqs; bootstrap=bootstrap, seed=seed)
+    return MSA(seqs; bootstrap = bootstrap, seed = seed)
 end
 
 """
@@ -222,8 +232,12 @@ Supports:
 """
 function Base.getindex(msa::AbstractMSA, rows::UnitRange{Int}, cols::UnitRange{Int})
     root_msa = root(msa)
-    abs_rows = isa(msa, MSA) ? rows : (msa.rows.start + rows.start - 1):(msa.rows.start + rows.stop - 1)
-    abs_cols = isa(msa, MSA) ? cols : (msa.cols.start + cols.start - 1):(msa.cols.start + cols.stop - 1)
+    abs_rows = isa(msa, MSA) ?
+        rows :
+        (msa.rows.start + rows.start - 1):(msa.rows.start + rows.stop - 1)
+    abs_cols = isa(msa, MSA) ?
+        cols :
+        (msa.cols.start + cols.start - 1):(msa.cols.start + cols.stop - 1)
     return MSAView(root_msa, abs_rows, abs_cols)
 end
 Base.getindex(msa::AbstractMSA, row::Int, col::Int) = getsequence(msa, row, col)
@@ -236,20 +250,24 @@ Base.getindex(msa::AbstractMSA, rows::UnitRange{Int}, ::Colon) = msa[rows, 1:len
 Base.getindex(msa::AbstractMSA, ::Colon, ::Colon) = msa[1:nseqs(msa), 1:length(msa)]
 
 function Base.checkbounds(msa::AbstractMSA, rows::Colon, cols::UnitRange{<:Integer})
-    if ! (1 <= cols.start <= cols.stop <= length(msa))
+    if !(1 <= cols.start <= cols.stop <= length(msa))
         throw(BoundsError(msa, (:, cols)))
     end
 end
 function Base.checkbounds(msa::AbstractMSA, rows::UnitRange{<:Integer}, cols::Colon)
-    if ! (1 <= rows.start <= rows.stop <= nseqs(msa))
+    if !(1 <= rows.start <= rows.stop <= nseqs(msa))
         throw(BoundsError(msa, (rows, :)))
     end
 end
-function Base.checkbounds(msa::AbstractMSA, rows::UnitRange{<:Integer}, cols::UnitRange{<:Integer})
-    if ! (1 <= rows.start <= rows.stop <= nseqs(msa))
+function Base.checkbounds(
+    msa::AbstractMSA,
+    rows::UnitRange{<:Integer},
+    cols::UnitRange{<:Integer},
+)
+    if !(1 <= rows.start <= rows.stop <= nseqs(msa))
         throw(BoundsError(msa, (rows, cols)))
     end
-    if ! (1 <= cols.start <= cols.stop <= length(msa))
+    if !(1 <= cols.start <= cols.stop <= length(msa))
         throw(BoundsError(msa, (rows, cols)))
     end
 end
@@ -328,7 +346,6 @@ function getsequence(v::MSAView, row::Int)
 end
 getsequence(msa::AbstractMSA, row::Int, col::Int) = getsequence(msa, row)[col]
 
-
 _is_full_height(msa::MSA) = true
 _is_full_height(msav::MSAView) = msav.rows == 1:nseqs(root(msav))
 
@@ -354,14 +371,18 @@ get_base_count(msa::MSA, interval::UnitRange{Int}) = @view msa.base_count[:, int
 get_base_count(msa::MSA) = msa.base_count
 function get_base_count(msav::MSAView, pos::Int)
     if !_is_full_height(msav)
-        throw(ErrorException("get_base_count not supported for views that slice rows (height), as it requires recomputation"))
+        throw(ErrorException(
+            "get_base_count not supported for views that slice rows (height), as it requires recomputation",
+        ))
     end
     abs_pos = msav.cols.start + pos - 1
     return @view root(msav).base_count[:, abs_pos]
 end
 function get_base_count(msav::MSAView, interval::UnitRange{Int})
     if !_is_full_height(msav)
-        throw(ErrorException("get_base_count not supported for views that slice rows (height), as it requires recomputation"))
+        throw(ErrorException(
+            "get_base_count not supported for views that slice rows (height), as it requires recomputation",
+        ))
     end
     abs_start = msav.cols.start + interval.start - 1
     abs_interval = abs_start:(abs_start + length(interval) - 1)
@@ -453,7 +474,7 @@ function consensus_major(msa::AbstractMSA, pos::Int)
     end
     return NON_DEGEN_BASES[argmax(p)]
 end
-function consensus_major(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa))
+function consensus_major(msa::AbstractMSA, interval::UnitRange{Int} = 1:width(msa))
     seq = join(consensus_major(msa, j) for j in interval)
     desc = "Major consensus for $(nseqs(msa)) seq MSA"
     return GappedOligo(seq, desc)
@@ -477,7 +498,7 @@ Generate a degenerate consensus sequence allowing ambiguity. Bases with frequenc
 
 See also [`consensus_major`](@ref), [`get_base_count`](@ref).
 """
-function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)::Char
+function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real = 0.0)::Char
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     p = get_base_count(msa, pos)
     if sum(p) < 0.5
@@ -488,8 +509,12 @@ function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real=0.0)::Char
     bs = NON_DEGEN_BASES[active]
     return IUPAC_V2B[bs]
 end
-function consensus_degen(msa::AbstractMSA, interval::UnitRange{Int}=1:width(msa); slack::Real=0.0)::GappedOligo
-    seq = join(consensus_degen(msa, j; slack=slack) for j in interval)
+function consensus_degen(
+    msa::AbstractMSA,
+    interval::UnitRange{Int} = 1:width(msa);
+    slack::Real = 0.0,
+)::GappedOligo
+    seq = join(consensus_degen(msa, j; slack = slack) for j in interval)
     desc = "Degenerate consensus for $(nseqs(msa)) seq MSA"
     return GappedOligo(seq, desc)
 end
@@ -506,7 +531,7 @@ Remove columns and rows with excessive gap content. Columns with no non-gap char
 # Returns
 - A new [`MSA`](@ref) with filtered sequences and columns.
 """
-function dry_msa(msa::AbstractMSA; gap_content::Real=1.0)
+function dry_msa(msa::AbstractMSA; gap_content::Real = 1.0)
     0 ≤ gap_content ≤ 1 || throw(ArgumentError("gap_content must be in [0,1]"))
     non_gap_cols = [j for j in 1:length(msa) if any(>(0.0), get_base_count(msa, j))]
     if isempty(non_gap_cols)
@@ -515,21 +540,24 @@ function dry_msa(msa::AbstractMSA; gap_content::Real=1.0)
     num_cols = length(non_gap_cols)
     kept_rows = Int[]
     for i in 1:nseqs(msa)
-        gap_count = sum((1 for j in non_gap_cols if getsequence(msa, i, j) == '-'), init=0)
+        gap_count = sum(
+            (1 for j in non_gap_cols if getsequence(msa, i, j) == '-'),
+            init = 0,
+        )
         prop = num_cols > 0 ? gap_count / num_cols : 0.0
         if prop < gap_content
             push!(kept_rows, i)
         end
     end
     if isempty(kept_rows)
-        return MSA(GappedOligo[]; bootstrap=bval(msa))
+        return MSA(GappedOligo[]; bootstrap = bval(msa))
     end
     new_seqs = Vector{GappedOligo}(undef, length(kept_rows))
     for (k, row) in enumerate(kept_rows)
         sub_str = join(getsequence(msa, row, j) for j in non_gap_cols)
         new_seqs[k] = GappedOligo(sub_str, description(getsequence(msa, row)))
     end
-    return MSA(new_seqs; bootstrap=bval(msa))
+    return MSA(new_seqs; bootstrap = bval(msa))
 end
 
 """
@@ -545,7 +573,11 @@ Calculate average pairwise nucleotide diversity. Uses probabilistic distance for
 # Returns
 - `Float64`: Average pairwise distance.
 """
-function nucleotide_diversity(msa::AbstractMSA; ignore_gaps::Bool=true, max_pairs::Int=10000)::Float64
+function nucleotide_diversity(
+    msa::AbstractMSA;
+    ignore_gaps::Bool = true,
+    max_pairs::Int = 10000,
+)::Float64
     L = length(msa)
     L == 0 && return 0.0
     n = nseqs(msa)
@@ -555,10 +587,10 @@ function nucleotide_diversity(msa::AbstractMSA; ignore_gaps::Bool=true, max_pair
     compute_all = n <= 200 || max_pairs >= total_possible
     npairs = compute_all ? total_possible : min(max_pairs, total_possible)
 
-    pairs = Vector{Tuple{Int,Int}}(undef, npairs)
+    pairs = Vector{Tuple{Int, Int}}(undef, npairs)
     @inbounds if compute_all
         idx = 1
-        for i in 1:n-1, j in i+1:n
+        for i in 1:n - 1, j in i + 1:n
             pairs[idx] = (i, j)
             idx += 1
         end
@@ -594,7 +626,12 @@ Calculate pairwise distance between two sequences using probabilistic matching f
 # Returns
 - `Float64`: Normalized distance (0.0 to 1.0).
 """
-function _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool=true)::Float64
+function _pairwise_distance(
+    msa::AbstractMSA,
+    i::Int,
+    j::Int;
+    ignore_gaps::Bool = true,
+)::Float64
     seq_i = getsequence(msa, i)
     seq_j = getsequence(msa, j)
     total_sites = 0
@@ -602,7 +639,7 @@ function _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool=
     for k in 1:length(msa)
         c_i = seq_i[k]
         c_j = seq_j[k]
-        if c_i == '-' || c_j == '-' 
+        if c_i == '-' || c_j == '-'
             ignore_gaps && continue
             # Treat gap as mismatch
             total_sites += 1
@@ -611,11 +648,11 @@ function _pairwise_distance(msa::AbstractMSA, i::Int, j::Int; ignore_gaps::Bool=
         end
         total_sites += 1
         if c_i == c_j
-            continue  # Exact match
+            continue # Exact match
         end
         # Probabilistic mismatch for IUPAC/degenerate
-        probs_i = get(IUPAC_PROBS, c_i, (.0,.0,.0,.0))
-        probs_j = get(IUPAC_PROBS, c_j, (.0,.0,.0,.0))
+        probs_i = get(IUPAC_PROBS, c_i, (0.0, 0.0, 0.0, 0.0))
+        probs_j = get(IUPAC_PROBS, c_j, (0.0, 0.0, 0.0, 0.0))
         match_prob = sum(probs_i .* probs_j)
         diff_sum += 1.0 - match_prob
     end

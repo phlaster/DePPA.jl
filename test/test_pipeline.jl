@@ -4,11 +4,11 @@ Random.seed!(123)
 
 file = "assets/TruA.fasta.gz"
 
-aln = MSA(file; mafft=true, bootstrap=10);
+aln = MSA(file; mafft = true, bootstrap = 10);
 fwds = construct_primers(aln)
-revs = construct_primers(aln; is_forward=false)
+revs = construct_primers(aln; is_forward = false)
 
-ppairs = best_pairs(fwds, revs; amplicon_len=190:190)
+ppairs = best_pairs(fwds, revs; amplicon_len = 190:190)
 
 tempfile = tempname()
 reffile = "assets/TruA_primers.txt"
