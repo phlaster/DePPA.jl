@@ -1,3 +1,4 @@
+# fatou-ignore-file undefined-name
 module DePPA
 
 """
@@ -12,6 +13,7 @@ DePPA
 export Oligos, Primers, Alignments
 
 
+include("utils.jl")
 include("Oligos.jl")
 include("Alignments.jl")
 include("Primers.jl")

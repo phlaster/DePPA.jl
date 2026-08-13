@@ -1,3 +1,5 @@
+# fatou-ignore-file undefined-name
+
 """
     export_evrogen(io::IO, primers; scale=0.04)
     export_evrogen(io::IO, pairs; scale=0.04)

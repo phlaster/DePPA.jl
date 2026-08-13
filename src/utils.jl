@@ -1,3 +1,18 @@
+module Utils
+export
+    NON_DEGEN_BASES,
+    DEGEN_BASES,
+    ALL_BASES,
+    BASES_W_GAPS,
+    IUPAC_B2V,
+    IUPAC_V2B,
+    IUPAC_COUNTS,
+    IUPAC_GC_CONTENT,
+    DNA_COMP_TABLE_DEG,
+    IUPAC_PROBS,
+    MAX_GC_OPTIONS,
+    MIN_GC_OPTIONS
+
 """
     NON_DEGEN_BASES
 
@@ -135,3 +150,5 @@ const MIN_GC_OPTIONS = let
     end
     d
 end
+
+end # utils

@@ -1,3 +1,5 @@
+# fatou-ignore-file undefined-name
+
 function _show_primer_common(io::IO, primer::AbstractPrimer)
     println(io, "  Sequence: ", String(primer))
     println(io, "  Length: ", length(primer))
@@ -44,11 +46,9 @@ function Base.show(io::IO, ::MIME"text/plain", primer::AbstractPrimer)
 
     if L == 1
         map_start_col = length(bar_start) + 1
-        map_end_col = map_start_col + eq_len - 1
         col_s = col_e = map_start_col
     else
         map_start_col = length(bar_start) + 1
-        map_end_col = map_start_col + eq_len - 1
         scale = (eq_len - 1) / (L - 1.0)
         col_s = map_start_col + round(Int, (s - 1) * scale)
         col_e = map_start_col + round(Int, (e - 1) * scale)

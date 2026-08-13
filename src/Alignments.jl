@@ -1,5 +1,6 @@
 module Alignments
-include("utils.jl")
+
+using ..Utils
 
 using ..Oligos
 using ProgressMeter
@@ -151,8 +152,8 @@ function MSA(predicate::Function, fasta::AbstractString; mafft::Bool=false, boot
         counter = 0
         for (desc, seq) in fr
             predicate(desc) ? (counter += 1) : continue
-            desc = isempty(desc) ? "seq$counter" : desc
-            push!(fasta_content, (desc, seq))
+            desc_final = isempty(desc) ? "seq$counter" : desc
+            push!(fasta_content, (desc_final, seq))
         end
     end
 

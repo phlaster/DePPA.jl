@@ -1,3 +1,5 @@
+# fatou-ignore-file undefined-name
+
 const BASE_COLORS = Dict{Char, Symbol}(
     'A' => :green,
     'C' => :blue,

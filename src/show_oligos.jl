@@ -1,3 +1,5 @@
+# fatou-ignore-file undefined-name
+
 _truncate_seq(seq::AbstractString, max_width::Int=20) = length(seq) > max_width ?
     seq[1:max(0, max_width-3)] * "..." : seq
 

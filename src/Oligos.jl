@@ -1,5 +1,6 @@
 module Oligos
-include("utils.jl")
+
+using ..Utils
 
 using Statistics
 export AbstractOligo, AbstractDegen, AbstractGapped

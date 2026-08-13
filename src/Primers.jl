@@ -856,7 +856,7 @@ end
 
 Base.convert(::Type{Pair{Primer}}, p::Pair{<:AbstractPrimer, <:AbstractPrimer}) = p
 
-# include("show_primers.jl")
+include("show_primers.jl")
 include("export_primers.jl")
 
 end # module
