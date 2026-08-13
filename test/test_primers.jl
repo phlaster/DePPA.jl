@@ -24,7 +24,7 @@ using SeqFold
 
         @test String(p1) == "ACGTTGCA"
         @test length(p1) == 8
-        @test isempty(p1) == false
+        @test !isempty(p1)
         @test collect(p1) == ['A', 'C', 'G', 'T', 'T', 'G', 'C', 'A']
         @test p1[1] == 'A'
         @test String(p1[2:4]) == "CGT"
@@ -32,7 +32,7 @@ using SeqFold
         @test n_unique_oligos(p1) == BigInt(1)
         @test n_deg_pos(p1) == 0
         @test description(p1) == "TestOligoPrimer"
-        @test hasgaps(p1) == false
+        @test !hasgaps(p1)
         @test nondegens(p1)[1] == oligo_cons
         @test oligo_range(p1) == 1:8
 
@@ -45,7 +45,7 @@ using SeqFold
         @test n_unique_oligos(p2) == BigInt(4)
         @test n_deg_pos(p2) == 2
         @test description(p2) == "TestDegenPrimer"
-        @test hasgaps(p2) == false
+        @test !hasgaps(p2)
         @test oligo_range(p2) == 1:8
 
         # Test empty primer
