@@ -28,20 +28,20 @@ using DePPA.Primers
         io = IOBuffer()
         export_evrogen(io, [p1, p2]; scale=1.0)
         content = String(take!(io))
-        @test content == "MyForward_F_1; ACGT; 1.0\nMyReverse_R_5; TGCA; 1.0\n"
+        @test content == "MyForward_F_1; ACGT; 1.0\nMyReverse_R_8; TGCA; 1.0\n"
         
         # Single pair with scale as a string
         io = IOBuffer()
         export_evrogen(io, pair1; scale="0.2")
         content = String(take!(io))
-        @test content == "MyForward_F_1; ACGT; 0.2\nMyReverse_R_5; TGCA; 0.2\n"
+        @test content == "MyForward_F_1; ACGT; 0.2\nMyReverse_R_8; TGCA; 0.2\n"
         
         # Vector of pairs
         io = IOBuffer()
         export_evrogen(io, [pair1, pair1])
         content = String(take!(io))
         @test occursin("MyForward_F_1; ACGT; 0.04", content)
-        @test occursin("MyReverse_R_5; TGCA; 0.04", content)
+        @test occursin("MyReverse_R_8; TGCA; 0.04", content)
         @test length(split(content, '\n')) == 5 # 4 lines + empty trailing line
         
         # Check name generation: empty description and sanitization
@@ -51,7 +51,7 @@ using DePPA.Primers
         # p3: desc empty -> DePPA_F_1_1
         @test occursin("DePPA_F_1_1; ACGT; 0.04", content)
         # p4: desc "Bad;Desc\t" -> "Bad Desc ", pos=5, idx=2
-        @test occursin("Bad Desc _R_5; TGCA; 0.04", content)
+        @test occursin("Bad Desc _R_8; TGCA; 0.04", content)
     end
     
     # --- File Export Tests ---
@@ -64,7 +64,7 @@ using DePPA.Primers
             lines = readlines(tmpfile)
             @test length(lines) == 2
             @test lines[1] == "MyForward_F_1; ACGT; 0.04"
-            @test lines[2] == "MyReverse_R_5; TGCA; 0.04"
+            @test lines[2] == "MyReverse_R_8; TGCA; 0.04"
             
             # Single primer
             export_evrogen(tmpfile, p1; scale=0.2)
@@ -77,14 +77,14 @@ using DePPA.Primers
             lines = readlines(tmpfile)
             @test length(lines) == 2
             @test lines[1] == "MyForward_F_1; ACGT; 0.04"
-            @test lines[2] == "MyReverse_R_5; TGCA; 0.04"
+            @test lines[2] == "MyReverse_R_8; TGCA; 0.04"
             
             # Single pair
             export_evrogen(tmpfile, pair1)
             lines = readlines(tmpfile)
             @test length(lines) == 2
             @test lines[1] == "MyForward_F_1; ACGT; 0.04"
-            @test lines[2] == "MyReverse_R_5; TGCA; 0.04"
+            @test lines[2] == "MyReverse_R_8; TGCA; 0.04"
         finally
             rm(tmpfile, force=true)
         end

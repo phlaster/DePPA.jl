@@ -92,7 +92,8 @@ end
 function _evrogen_name(p::AbstractPrimer, idx::Int)
     base_desc = replace(description(p), r"[;\t\n\r]" => " ")
     dir = p.is_forward ? "F" : "R"
-    pos = p.pos.start
+    
+    pos = p.is_forward ? p.pos.start : p.pos.stop
     
     if isempty(base_desc)
         return "DePPA_$(dir)_$(pos)_$(idx)"
