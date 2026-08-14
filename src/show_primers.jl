@@ -93,7 +93,7 @@ function Base.show(io::IO, ::MIME"text/plain", primer::AbstractPrimer)
     _show_primer_common(io, primer)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer})
+function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer, <:AbstractPrimer})
     fwd, rev = pp.first, pp.second
 
     # Validate that this is a proper forward/reverse pair
@@ -170,7 +170,7 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer})
         println(
             io,
             "Forward: ",
-            String(fwd),
+            !isnothing(fwd.adapter) ? '['*String(fwd.adapter)*']'*String(fwd.consensus) : String(fwd),
             " at ",
             fwd.pos.start,
             ":",
@@ -180,7 +180,7 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer})
         println(
             io,
             "Reverse: ",
-            String(rev),
+            !isnothing(rev.adapter) ? '['*String(rev.adapter)*']'*String(rev.consensus) : String(rev),
             " at ",
             rev.pos.start,
             ":",
