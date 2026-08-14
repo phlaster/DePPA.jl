@@ -7,6 +7,7 @@ export miniblast, MiniBlastHit
 export add_illumina_adapters, reannotated
 export setAdapters!, getAdapters
 
+using ..Utils
 using ..Oligos
 using ..Alignments
 
@@ -184,7 +185,7 @@ function Primer(
     dg_temp=37.0,
     slack=0.0,
     max_dg_drop::Real=1.0,
-    adapter_pair = GLOBAL_ADAPTERS[],
+    adapter_pair=GLOBAL_ADAPTERS[],
     descr="Primer for $(nseqs(msa)) seq MSA at positions $interval",
 )::Primer{DegenOligo}
     _cons = consensus_degen(msa, interval; slack=slack)
@@ -316,7 +317,7 @@ Oligos.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
 Oligos.oligo_range(primer::AbstractPrimer)::UnitRange{Int} = primer.pos
 
 """
-    _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, skip_interval; min_identity=0.8) -> Bool
+    _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, skip_interval; min_identity=0.75) -> Bool
 
 Check if a degenerate primer sequence has high-probability matches outside the `skip_interval` in the MSA.
 If `skip_interval` is `nothing`, all positions in the MSA are checked.
@@ -325,8 +326,8 @@ Evaluates both forward and reverse complement orientations.
 function _has_nonspecific_match(
     primer_seq::AbstractString,
     msa::AbstractMSA,
-    skip_interval::Union{Nothing, UnitRange{Int}}=nothing;
-    min_identity::Float64=0.8,
+    skip_interval::Union{Nothing,UnitRange{Int}}=nothing;
+    min_identity::Float64=0.75,
 )::Bool
     plen = length(primer_seq)
     L = width(msa)
@@ -363,7 +364,7 @@ function _has_nonspecific_match(
                 end
 
                 p_char = seq[j]
-                p_probs = get(Oligos.IUPAC_PROBS, p_char, (0.0, 0.0, 0.0, 0.0))
+                p_probs = get(IUPAC_PROBS, p_char, (0.0, 0.0, 0.0, 0.0))
 
                 # Accumulate probability of match
                 match_score += sum(p_probs .* col_probs)
@@ -404,14 +405,15 @@ struct MiniBlastHit
 end
 
 """
-    miniblast(target_msa::AbstractMSA, query_oligo::AbstractDegen, threshold=0.75) -> Vector{MiniBlastHit}
+    miniblast(target_msa::AbstractMSA, query::AbstractString, threshold=0.75) -> Vector{MiniBlastHit}
 
-Search for high-probability matches of `query_oligo` within `target_msa` using a probabilistic sliding window.
+Search for high-probability matches of `query` within `target_msa` using a probabilistic sliding window.
 Evaluates both forward and reverse complement orientations of the query.
 
 # Arguments
 - `target_msa::AbstractMSA`: The multiple sequence alignment to search within.
-- `query_oligo::AbstractDegen`: The degenerate oligo to search for.
+- `query`: The query sequence to search for. Can be an `AbstractString` (including `AbstractOligo`) or an `AbstractPrimer`.
+  The query must not contain gaps (`-`).
 - `threshold::Real=0.75`: Minimum average match probability (identity) required to report a hit.
 
 # Returns
@@ -419,21 +421,10 @@ Evaluates both forward and reverse complement orientations of the query.
 """
 function miniblast(
     target_msa::AbstractMSA,
-    query_oligo::AbstractDegen,
+    query::AbstractString,
     threshold::Real=0.75,
 )::Vector{MiniBlastHit}
-    q_ungapped_str = filter(!=('-'), String(query_oligo))
-    plen = length(q_ungapped_str)
-    L = width(target_msa)
-    (iszero(plen) || plen > L) && return MiniBlastHit[]
-
-    q_oligo_ungapped = DegenOligo(q_ungapped_str)
-    rc_str = String(_ext_revcomp(q_oligo_ungapped))
-
-    abs_match_threshold = plen * threshold
-    hits = MiniBlastHit[]
-
-    function _search_strand(seq::AbstractString, strand::Symbol)
+    function _search_strand!(hits, seq, strand)
         for startpos in 1:(L-plen+1)
             match_score = 0.0
             valid = true
@@ -448,7 +439,7 @@ function miniblast(
                 end
 
                 p_char = seq[j]
-                p_probs = get(Oligos.IUPAC_PROBS, p_char, (0.0, 0.0, 0.0, 0.0))
+                p_probs = get(IUPAC_PROBS, p_char, (0.0, 0.0, 0.0, 0.0))
 
                 match_score += sum(p_probs .* col_probs)
 
@@ -465,12 +456,30 @@ function miniblast(
         end
     end
 
-    _search_strand(q_ungapped_str, :forward)
-    _search_strand(rc_str, :reverse)
+    q_oligo = DegenOligo(query)
+
+    plen = length(q_oligo)
+    L = width(target_msa)
+    (iszero(plen) || plen > L) && return MiniBlastHit[]
+
+    abs_match_threshold = plen * threshold
+    hits = MiniBlastHit[]
+
+    _search_strand!(hits, q_oligo, :forward)
+    _search_strand!(hits, _ext_revcomp(q_oligo), :reverse)
 
     sort!(hits, by=h -> h.identity, rev=true)
     return hits
 end
+
+function miniblast(
+    target_msa::AbstractMSA,
+    query::AbstractPrimer,
+    threshold::Real=0.75,
+)::Vector{MiniBlastHit}
+    return miniblast(target_msa, query.consensus, threshold)
+end
+
 
 """
     construct_primers(msa::AbstractMSA; kwargs...) -> Vector{Primer{DegenOligo}}
@@ -524,7 +533,7 @@ function construct_primers(
     tm_conds=:pcr,
     dg_temp::Real=mean(tm_range),
     offtarget_reject_threshold::Real=0.75,
-    adapter_pair = GLOBAL_ADAPTERS[],
+    adapter_pair=GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
     negative_msa::Vector{<:AbstractMSA}=AbstractMSA[],
     nested_pair::Union{
