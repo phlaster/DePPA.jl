@@ -316,15 +316,16 @@ Oligos.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
 Oligos.oligo_range(primer::AbstractPrimer)::UnitRange{Int} = primer.pos
 
 """
-    _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, target_interval; min_identity=0.8) -> Bool
+    _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, skip_interval; min_identity=0.8) -> Bool
 
-Check if a degenerate primer sequence has high-probability matches outside the target interval in the MSA.
+Check if a degenerate primer sequence has high-probability matches outside the `skip_interval` in the MSA.
+If `skip_interval` is `nothing`, all positions in the MSA are checked.
 Evaluates both forward and reverse complement orientations.
 """
 function _has_nonspecific_match(
     primer_seq::AbstractString,
     msa::AbstractMSA,
-    target_interval::UnitRange{Int};
+    skip_interval::Union{Nothing, UnitRange{Int}}=nothing;
     min_identity::Float64=0.8,
 )::Bool
     plen = length(primer_seq)
@@ -341,9 +342,11 @@ function _has_nonspecific_match(
     function _check_seq(seq::AbstractString)::Bool
         for startpos in 1:(L-plen+1)
             # Skip if the window overlaps with the target interval
-            window_end = startpos + plen - 1
-            if startpos <= target_interval.stop && window_end >= target_interval.start
-                continue
+            if !isnothing(skip_interval)
+                window_end = startpos + plen - 1
+                if startpos <= skip_interval.stop && window_end >= skip_interval.start
+                    continue
+                end
             end
 
             match_score = 0.0
@@ -491,7 +494,8 @@ Construct a list of candidate primers from an MSA based on thermodynamic, conser
 - `tm_conf_int::Real=0.2`: Confidence interval for Tm.
 - `tm_conds=:pcr`: Thermodynamic conditions for Tm calculation.
 - `dg_temp::Real=mean(tm_range)`: Temperature for ΔG calculation.
-- `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding within the MSA. If a candidate primer matches another region in the MSA with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations.
+- `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding. If a candidate primer matches another region in the MSA (or any `negative_msa`) with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations.
+- `negative_msa::Vector{<:AbstractMSA}=AbstractMSA[]`: A vector of negative alignments. Candidate primers are checked against these alignments, and any primer matching with an average probability greater than or equal to `offtarget_reject_threshold` is discarded.
 - `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
   - If `nothing` or `offset == 0`, constructs primers across the entire MSA.
   - If `offset < 0`, constructs primers strictly inside the flanking pair's amplicon boundaries, shrunk by the absolute value of the offset.
@@ -522,6 +526,7 @@ function construct_primers(
     offtarget_reject_threshold::Real=0.75,
     adapter_pair = GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
+    negative_msa::Vector{<:AbstractMSA}=AbstractMSA[],
     nested_pair::Union{
         Nothing,
         Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
@@ -665,6 +670,23 @@ function construct_primers(
                 min_identity=offtarget_reject_threshold,
             )
                 continue
+            end
+
+            # Check negative MSAs for off-targets
+            if !isempty(negative_msa)
+                reject = false
+                for neg_msa in negative_msa
+                    if _has_nonspecific_match(
+                        cons_str,
+                        neg_msa,
+                        nothing; # Do not skip any interval for negative MSAs
+                        min_identity=offtarget_reject_threshold,
+                    )
+                        reject = true
+                        break
+                    end
+                end
+                reject && continue
             end
 
             gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
