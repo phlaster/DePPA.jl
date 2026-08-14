@@ -184,6 +184,7 @@ function Primer(
     dg_temp=37.0,
     slack=0.0,
     max_dg_drop::Real=1.0,
+    adapter_pair = GLOBAL_ADAPTERS[],
     descr="Primer for $(nseqs(msa)) seq MSA at positions $interval",
 )::Primer{DegenOligo}
     _cons = consensus_degen(msa, interval; slack=slack)
@@ -210,9 +211,8 @@ function Primer(
     final_dg = delta_G
     adapter_to_add = nothing
 
-    current_adapters = GLOBAL_ADAPTERS[]
-    if !isnothing(current_adapters)
-        adapter_to_add = is_forward ? current_adapters.first : current_adapters.second
+    if !isnothing(adapter_pair)
+        adapter_to_add = is_forward ? adapter_pair.first : adapter_pair.second
         full_oligo = adapter_to_add * underlying_oligo
 
         final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
@@ -520,6 +520,7 @@ function construct_primers(
     tm_conds=:pcr,
     dg_temp::Real=mean(tm_range),
     offtarget_reject_threshold::Real=0.75,
+    adapter_pair = GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
     nested_pair::Union{
         Nothing,
@@ -690,11 +691,10 @@ function construct_primers(
             final_dg = dg_val
             adapter_to_add = nothing
 
-            current_adapters = GLOBAL_ADAPTERS[]
-            if !isnothing(current_adapters)
+            if !isnothing(adapter_pair)
                 adapter_to_add = is_forward ?
-                                 current_adapters.first :
-                                 current_adapters.second
+                                 adapter_pair.first :
+                                 adapter_pair.second
                 full_oligo = adapter_to_add * cons
 
                 final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
