@@ -204,9 +204,9 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", primers::AbstractVector{<:AbstractPrimer})
     isempty(primers) && (print(io, "Empty primer vector"); return)
-    
+
     anymsa = root(first(primers).msa)
-    
+
     if !all(root(p.msa) == anymsa for p in primers)
         println(io, "Vector of $(length(primers)) primers (different MSAs):")
         for p in primers
@@ -216,11 +216,11 @@ function Base.show(io::IO, ::MIME"text/plain", primers::AbstractVector{<:Abstrac
         end
         return
     end
-        
+
     L = length(anymsa)
     fwd_counts = zeros(Int, L)
     rev_counts = zeros(Int, L)
-    
+
     for p in primers
         if p.is_forward
             fwd_counts[p.pos.start:p.pos.stop] .+= 1
@@ -228,103 +228,105 @@ function Base.show(io::IO, ::MIME"text/plain", primers::AbstractVector{<:Abstrac
             rev_counts[p.pos.start:p.pos.stop] .+= 1
         end
     end
-    
-    term_width = displaysize(io)[2] - 1
+
+    terminal_height, terminal_width = displaysize(io)
+    H = clamp(div(terminal_height - 6, 2), 3, 12)
     max_val = max(maximum(fwd_counts), maximum(rev_counts), 1)
-    max_val_str = string(max_val)
-    
-    scale_w = max(length(max_val_str), 3) + 3
-    W = max(10, term_width - scale_w)
-    
+    scale_w = max(length(string(max_val)), 3) + 3
+    W = max(10, terminal_width - 1 - scale_w)
     fwd_bins = zeros(Int, W)
     rev_bins = zeros(Int, W)
     scale = L == 1 ? 0.0 : (W - 1) / (L - 1)
-    
+    col_of(pos) = floor(Int, (pos - 1) * scale) + 1
     for pos in 1:L
-        col = floor(Int, (pos - 1) * scale) + 1
-        fwd_bins[col] += fwd_counts[pos]
-        rev_bins[col] += rev_counts[pos]
+        c = col_of(pos)
+        fwd_bins[c] = max(fwd_bins[c], fwd_counts[pos])
+        rev_bins[c] = max(rev_bins[c], rev_counts[pos])
     end
-    
-    H = 4
-    
-    function get_lower_block(frac)
-        sub = floor(Int, frac * 8)
-        return " ▁▂▃▄▅▆▇█"[sub + 1]
-    end
+    max_val = max(maximum(fwd_bins), maximum(rev_bins), 1)
+
+    lower_blocks = (' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█')
+    get_lower_block(frac) = lower_blocks[clamp(floor(Int, frac * 8), 0, 7) + 1]
+
     function get_upper_block(frac)
-        if frac >= 0.5
-            return '▀'
-        elseif frac > 0.0
-            return '▔'
-        else
-            return ' '
-        end
+        frac >= 0.5 && return '▀'
+        frac > 0.0 && return '▔'
+        return ' '
     end
 
+    axis = fill('═', W)
+    for mark in 100:100:L
+        axis[col_of(mark)] = '╪'
+    end
+    axis[1] = '╞'
+
+    nearest_hundred = round(Int, L / 100) * 100
+    cell_width = (L - 1) / (W - 1)
+    if nearest_hundred > 0 && abs(L - nearest_hundred) <= 2*cell_width
+        axis[W] = '╡'
+    end
+
+    prefix(label, tick) = rpad(label, scale_w - 3) * tick
+    show_half = iseven(H) && iseven(max_val)
+    half_label = string(div(max_val, 2))
+    half_row_fwd = div(H, 2) + 1
+    half_row_rev = div(H, 2)
     println(io, "Primer distribution for $(nseqs(anymsa)) seq MSA (L=$L): $(length(primers)) primers")
-    
     for i in 1:H
-        level = H - i + 1
-        frac_threshold = level / H
-        next_frac_threshold = (level - 1) / H
-        
         if i == 1
-            print(io, rpad(string(max_val), scale_w - 3), " ┤ ")
+            print(io, prefix(string(max_val), " ┤ "))
+        elseif show_half && i == half_row_fwd
+            print(io, prefix(half_label, " ┤ "))
         else
-            print(io, rpad("", scale_w - 3), " │ ")
+            print(io, prefix("", " │ "))
         end
-        
         for col in 1:W
-            val = fwd_bins[col] / max_val
-            if val >= frac_threshold
+            h = fwd_bins[col] / max_val * H
+            lo, hi = H - i, H - i + 1
+            if h >= hi
                 print(io, '█')
-            elseif val > next_frac_threshold
-                print(io, get_lower_block((val - next_frac_threshold) / (frac_threshold - next_frac_threshold)))
+            elseif h > lo
+                print(io, get_lower_block(h - lo))
             else
                 print(io, ' ')
             end
         end
         println(io)
     end
-    
-    print(io, rpad("0", scale_w - 3), " ┼ ═")
-    print(io, repeat('═', W))
+
+    print(io, prefix("0", " ┼ "))
+    print(io, String(axis))
     println(io)
-    
+
     for i in 1:H
-        level = H - i + 1
-        frac_threshold = level / H
-        next_frac_threshold = (level - 1) / H
-        
         if i == H
-            print(io, rpad(string(max_val), scale_w - 3), " ┘ ")
+            print(io, prefix(string(max_val), " ┤ "))
+        elseif show_half && i == half_row_rev
+            print(io, prefix(half_label, " ┤ "))
         else
-            print(io, rpad("", scale_w - 3), " │ ")
+            print(io, prefix("", " │ "))
         end
-        
         for col in 1:W
-            val = rev_bins[col] / max_val
-            if val >= frac_threshold
+            h = rev_bins[col] / max_val * H
+            lo, hi = i - 1, i
+            if h >= hi
                 print(io, '█')
-            elseif val > next_frac_threshold
-                print(io, get_upper_block((val - next_frac_threshold) / (frac_threshold - next_frac_threshold)))
+            elseif h > lo
+                print(io, get_upper_block(h - lo))
             else
                 print(io, ' ')
             end
         end
         println(io)
     end
-    
-    print(io, rpad("", scale_w - 3), "   ")
+
+    print(io, prefix("", "   "))
     str_L = string(L)
-    str_1 = "1"
-    if W >= length(str_L) + length(str_1) + 2
-        print(io, str_1)
-        print(io, repeat(' ', W - length(str_L) - length(str_1)))
-        print(io, str_L)
+    if W >= length(str_L) + 2
+        print(io, '1', repeat(' ', W - length(str_L) - 1), str_L)
     else
         print(io, repeat(' ', W))
     end
-    println(io)
+
+    return nothing
 end
