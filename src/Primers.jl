@@ -4,7 +4,7 @@ export AbstractPrimer
 export Primer
 export construct_primers, best_pairs, export_evrogen
 export miniblast, MiniBlastHit
-export add_illumina_adapters, reannotated
+export reannotated
 export setAdapters!, getAdapters
 
 using ..Utils
@@ -484,11 +484,10 @@ end
 """
     construct_primers(msa::AbstractMSA; kwargs...) -> Vector{Primer{DegenOligo}}
 
-Construct a list of candidate primers from an MSA based on thermodynamic, conservation, and specificity filters.
+Construct a list of candidate primers (both forward and reverse) from an MSA based on thermodynamic, conservation, and specificity filters.
 
 # Arguments
 - `msa::AbstractMSA`: The multiple sequence alignment.
-- `is_forward::Bool=true`: Design forward (`true`) or reverse (`false`) primers.
 - `length_range::UnitRange{Int}=17:23`: Allowed primer lengths.
 - `tail_length::Int=3`: Length of the 3' tail region.
 - `head_degen_pos::Int=5`: Maximum allowed degenerate positions in the 5' head region.
@@ -511,13 +510,12 @@ Construct a list of candidate primers from an MSA based on thermodynamic, conser
   - If `offset > 0`, constructs forward primers upstream of the flanking amplicon (with the given offset) and reverse primers downstream.
 
 # Returns
-- `Vector{Primer{DegenOligo}}`: A list of valid candidate primers.
+- `Vector{Primer{DegenOligo}}`: A list of valid candidate primers (mixed forward and reverse).
 
 See also [`best_pairs`](@ref), [`Primer`](@ref), [`consensus_degen`](@ref).
 """
 function construct_primers(
     msa::AbstractMSA;
-    is_forward::Bool=true,
     length_range::UnitRange{Int}=17:23,
     tail_length::Int=3,
     tail_degen_pos::Int=0,
@@ -533,7 +531,7 @@ function construct_primers(
     tm_conds=:pcr,
     dg_temp::Real=mean(tm_range),
     offtarget_reject_threshold::Real=0.75,
-    adapter_pair=GLOBAL_ADAPTERS[],
+    adapter_pair = GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
     negative_msa::Vector{<:AbstractMSA}=AbstractMSA[],
     nested_pair::Union{
@@ -555,14 +553,21 @@ function construct_primers(
     0 ≤ offtarget_reject_threshold ≤ 1 ||
         throw(ArgumentError("offtarget_reject_threshold must be in [0,1]"))
 
-    primers = Primer{DegenOligo}[]
     L = length(msa)
     base_count = get_base_count(msa)
 
-    search_start::Int = 1
-    search_end::Int = L
+    # 1. Generate all valid candidate intervals
+    candidates = Tuple{UnitRange{Int}, Bool}[]
 
-    if !isnothing(nested_pair)
+    if isnothing(nested_pair) || nested_pair[2] == 0
+        for len in length_range
+            len > L && continue
+            for startpos in 1:(L - len + 1)
+                push!(candidates, (startpos:(startpos+len-1), true))
+                push!(candidates, (startpos:(startpos+len-1), false))
+            end
+        end
+    else
         flanking_pair, offset = nested_pair
         amp_start = flanking_pair.first.pos.start
         amp_stop = flanking_pair.second.pos.stop
@@ -575,7 +580,6 @@ function construct_primers(
         if offset < 0
             search_start = amp_start - offset
             search_end = amp_stop + offset
-
             if search_start > search_end
                 throw(ArgumentError(
                     "Nested offset ($offset) is too large, leaving no valid region between $search_start and $search_end",
@@ -591,170 +595,186 @@ function construct_primers(
                     "Nested region length ($(search_end - search_start + 1)) is smaller than minimum primer length ($(minimum(length_range)))",
                 ))
             end
-        elseif offset > 0
-            if is_forward
-                search_start = 1
-                search_end = amp_start - offset
-                if search_end < 1
-                    throw(ArgumentError(
-                        "Not enough space upstream of the flanking amplicon (amp_start=$amp_start) to construct outer forward primers with offset $offset",
-                    ))
+
+            for len in length_range
+                len > (search_end - search_start + 1) && continue
+                for startpos in search_start:(search_end - len + 1)
+                    push!(candidates, (startpos:(startpos+len-1), true))
+                    push!(candidates, (startpos:(startpos+len-1), false))
                 end
-                if search_end - search_start + 1 < minimum(length_range)
-                    throw(ArgumentError(
-                        "Not enough space upstream to construct outer forward primers. Available: $(search_end - search_start + 1)bp, Min primer length: $(minimum(length_range))",
-                    ))
+            end
+        else # offset > 0
+            # Forward bounds
+            fwd_start = 1
+            fwd_end = amp_start - offset
+            if fwd_end < 1
+                throw(ArgumentError(
+                    "Not enough space upstream of the flanking amplicon (amp_start=$amp_start) to construct outer forward primers with offset $offset",
+                ))
+            end
+            if fwd_end - fwd_start + 1 < minimum(length_range)
+                throw(ArgumentError(
+                    "Not enough space upstream to construct outer forward primers. Available: $(fwd_end - fwd_start + 1)bp, Min primer length: $(minimum(length_range))",
+                ))
+            end
+
+            # Reverse bounds
+            rev_start = amp_stop + offset
+            rev_end = L
+            if rev_start > L
+                throw(ArgumentError(
+                    "Not enough space downstream of the flanking amplicon (amp_stop=$amp_stop) to construct outer reverse primers with offset $offset",
+                ))
+            end
+            if rev_end - rev_start + 1 < minimum(length_range)
+                throw(ArgumentError(
+                    "Not enough space downstream to construct outer reverse primers. Available: $(rev_end - rev_start + 1)bp, Min primer length: $(minimum(length_range))",
+                ))
+            end
+
+            for len in length_range
+                if len <= fwd_end - fwd_start + 1
+                    for startpos in fwd_start:(fwd_end - len + 1)
+                        push!(candidates, (startpos:(startpos+len-1), true))
+                    end
                 end
-            else
-                search_start = amp_stop + offset
-                search_end = L
-                if search_start > L
-                    throw(ArgumentError(
-                        "Not enough space downstream of the flanking amplicon (amp_stop=$amp_stop) to construct outer reverse primers with offset $offset",
-                    ))
-                end
-                if search_end - search_start + 1 < minimum(length_range)
-                    throw(ArgumentError(
-                        "Not enough space downstream to construct outer reverse primers. Available: $(search_end - search_start + 1)bp, Min primer length: $(minimum(length_range))",
-                    ))
+                if len <= rev_end - rev_start + 1
+                    for startpos in rev_start:(rev_end - len + 1)
+                        push!(candidates, (startpos:(startpos+len-1), false))
+                    end
                 end
             end
         end
     end
 
+    # 2. Define thread-safe evaluation logic
+    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)::Union{Nothing, Primer{DegenOligo}}
+        len = length(interval)
+        tail_len = min(tail_length, len)
+        head_len = len - tail_len
+        head_len < 0 && return nothing
+
+        depths = msadepth(msa, interval)
+        any(<(min_msadepth), depths) && return nothing
+
+        if is_forward
+            head_interval = interval.start:(interval.start+head_len-1)
+            tail_interval = (interval.start+head_len):interval.stop
+        else
+            head_interval = (interval.start+tail_len):interval.stop
+            tail_interval = interval.start:(interval.start+tail_len-1)
+        end
+
+        if head_len > 0
+            head_freqs = @view base_count[:, head_interval]
+            head_deg = sum(count(>(slack), col) > 1 for col in eachcol(head_freqs))
+            head_deg > head_degen_pos && return nothing
+        end
+
+        if tail_len > 0
+            tail_freqs = @view base_count[:, tail_interval]
+            tail_deg = sum(count(>(slack), col) > 1 for col in eachcol(tail_freqs))
+            tail_deg > tail_degen_pos && return nothing
+        end
+
+        _cons = consensus_degen(msa, interval; slack=slack)
+        hasgaps(_cons) && return nothing
+
+        cons_str = String(parent(_cons))
+        if _has_nonspecific_match(
+            cons_str,
+            msa,
+            interval;
+            min_identity=offtarget_reject_threshold,
+        )
+            return nothing
+        end
+
+        # Check negative MSAs for off-targets
+        if !isempty(negative_msa)
+            for neg_msa in negative_msa
+                if _has_nonspecific_match(
+                    cons_str,
+                    neg_msa,
+                    nothing;
+                    min_identity=offtarget_reject_threshold,
+                )
+                    return nothing
+                end
+            end
+        end
+
+        gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
+
+        cons = DegenOligo(gapped_cons)
+        n_unique_oligos(cons) > max_oligo_variants && return nothing
+
+        cons = n_unique_oligos(cons) == 1 ? Oligo(cons) : cons
+
+        gc = _ext_gc_content(cons)
+        !(gc_range.start / 100 <= gc <= gc_range.stop / 100) && return nothing
+
+        dg_val = _ext_dg(cons; max_samples=max_samples, temp=dg_temp)
+        dg_val < min_delta_g && return nothing
+
+        Tm = _ext_tm(
+            cons;
+            max_samples=max_samples,
+            conf_int=tm_conf_int,
+            conditions=tm_conds,
+        )
+        (tm_range.stop < first(Tm.conf) || last(Tm.conf) < tm_range.start) && return nothing
+
+        final_dg = dg_val
+        adapter_to_add = nothing
+
+        if !isnothing(adapter_pair)
+            adapter_to_add = is_forward ? adapter_pair.first : adapter_pair.second
+            full_oligo = adapter_to_add * cons
+
+            final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
+
+            if (final_dg - dg_val) < -max_dg_drop
+                return nothing
+            end
+        end
+
+        return Primer{DegenOligo}(
+            msa,
+            interval,
+            is_forward,
+            DegenOligo(cons),
+            tail_len,
+            Tm,
+            final_dg,
+            gc,
+            slack,
+            adapter_to_add,
+        )
+    end
+
+    # 3. Multithreaded evaluation
     prog = Progress(
-        length(length_range);
-        desc=rpad(is_forward ? "Constructing F…" : "Constructing R…", 20),
+        length(candidates);
+        desc=rpad("Constructing primers…", 20),
         color=:white,
         barlen=10,
     )
     l = ReentrantLock()
+    primers = Primer{DegenOligo}[]
 
-    Threads.@threads for len in length_range
-        len > L && continue
-        tail_len = min(tail_length, len)
-        head_len = len - tail_len
-        head_len < 0 && continue
+    Threads.@threads for idx in 1:length(candidates)
+        interval, is_forward = candidates[idx]
+        p = _evaluate(interval, is_forward)
 
-        actual_search_start = max(1, search_start)
-        actual_search_end = min(L - len + 1, search_end - len + 1)
-
-        if actual_search_start > actual_search_end
-            continue
-        end
-
-        for startpos in actual_search_start:actual_search_end
-            interval::UnitRange{Int} = startpos:(startpos+len-1)
-            depths = msadepth(msa, interval)
-            any(<(min_msadepth), depths) && continue
-
-            if is_forward
-                head_interval = startpos:(startpos+head_len-1)
-                tail_interval = (startpos+head_len):(startpos+len-1)
-            else
-                head_interval = (startpos+tail_len):(startpos+len-1)
-                tail_interval = startpos:(startpos+tail_len-1)
+        lock(l)
+        try
+            if !isnothing(p)
+                push!(primers, p)
             end
-
-            if head_len > 0
-                head_freqs = @view base_count[:, head_interval]
-                head_deg = sum(count(>(slack), col) > 1 for col in eachcol(head_freqs))
-                head_deg > head_degen_pos && continue
-            end
-
-            if tail_len > 0
-                tail_freqs = @view base_count[:, tail_interval]
-                tail_deg = sum(count(>(slack), col) > 1 for col in eachcol(tail_freqs))
-                tail_deg > tail_degen_pos && continue
-            end
-
-            _cons = consensus_degen(msa, interval; slack=slack)
-            hasgaps(_cons) && continue
-
-            cons_str = String(parent(_cons))
-            if _has_nonspecific_match(
-                cons_str,
-                msa,
-                interval;
-                min_identity=offtarget_reject_threshold,
-            )
-                continue
-            end
-
-            # Check negative MSAs for off-targets
-            if !isempty(negative_msa)
-                reject = false
-                for neg_msa in negative_msa
-                    if _has_nonspecific_match(
-                        cons_str,
-                        neg_msa,
-                        nothing; # Do not skip any interval for negative MSAs
-                        min_identity=offtarget_reject_threshold,
-                    )
-                        reject = true
-                        break
-                    end
-                end
-                reject && continue
-            end
-
-            gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
-
-            cons = DegenOligo(gapped_cons)
-            n_unique_oligos(cons) > max_oligo_variants && continue
-
-            cons = n_unique_oligos(cons) == 1 ? Oligo(cons) : cons
-
-            gc = _ext_gc_content(cons)
-            !(gc_range.start / 100 <= gc <= gc_range.stop / 100) && continue
-
-            dg_val = _ext_dg(cons; max_samples=max_samples, temp=dg_temp)
-            dg_val < min_delta_g && continue
-
-            Tm = _ext_tm(
-                cons;
-                max_samples=max_samples,
-                conf_int=tm_conf_int,
-                conditions=tm_conds,
-            )
-            (tm_range.stop < first(Tm.conf) || last(Tm.conf) < tm_range.start) && continue
-
-            final_dg = dg_val
-            adapter_to_add = nothing
-
-            if !isnothing(adapter_pair)
-                adapter_to_add = is_forward ?
-                                 adapter_pair.first :
-                                 adapter_pair.second
-                full_oligo = adapter_to_add * cons
-
-                final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
-
-                if (final_dg - dg_val) < -max_dg_drop
-                    continue
-                end
-            end
-
-            primer = Primer{DegenOligo}(
-                msa,
-                interval,
-                is_forward,
-                DegenOligo(cons),
-                tail_len,
-                Tm,
-                final_dg,
-                gc,
-                slack,
-                adapter_to_add,
-            )
-
-            lock(l)
-            try
-                push!(primers, primer)
-                next!(prog)
-            finally
-                unlock(l)
-            end
+            next!(prog)
+        finally
+            unlock(l)
         end
     end
 
@@ -762,17 +782,12 @@ function construct_primers(
 end
 
 """
-    best_pairs(forwards::Vector{<:Primer}, reverses::Vector{<:Primer};
-        amplicon_len::UnitRange{Int}=0:9999,
-        max_tm_diff::Real=4.0,
-        nested_pair=nothing
-    ) -> Vector{Pair{Primer{DegenOligo}}}
+    best_pairs(primers::Vector{<:AbstractPrimer}; kwargs...) -> Vector{Pair{Primer{DegenOligo}}}
 
-Find the best matching pairs of forward and reverse primers.
+Find the best matching pairs of forward and reverse primers from a single vector of mixed primers.
 
 # Arguments
-- `forwards::Vector{<:Primer}`: A list of forward primers.
-- `reverses::Vector{<:Primer}`: A list of reverse primers.
+- `primers::Vector{<:AbstractPrimer}`: A list of primers containing both forward and reverse primers (e.g., output from `construct_primers`).
 - `amplicon_len::UnitRange{Int}=0:9999`: Allowed range for the total amplicon length.
 - `max_tm_diff::Real=4.0`: Maximum allowed difference in mean Tm between forward and reverse primers.
 - `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
@@ -786,8 +801,7 @@ Find the best matching pairs of forward and reverse primers.
 See also [`construct_primers`](@ref), [`Primer`](@ref).
 """
 function best_pairs(
-    forwards::Vector{<:Primer},
-    reverses::Vector{<:Primer};
+    primers::Vector{<:AbstractPrimer};
     amplicon_len::UnitRange{Int}=0:9999,
     max_tm_diff::Real=4.0,
     nested_pair::Union{
@@ -795,18 +809,16 @@ function best_pairs(
         Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
     }=nothing,
 )::Vector{Pair{Primer{DegenOligo},Primer{DegenOligo}}}
-    pairs = Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
-    (isempty(forwards) || isempty(reverses)) && return pairs
+    isempty(primers) && return Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
 
-    all(p -> p.is_forward, forwards) ||
-        throw(ArgumentError("All forwards must be forward primers"))
-    all(p -> !p.is_forward, reverses) ||
-        throw(ArgumentError("All reverses must be reverse primers"))
+    # Separate forwards and reverses
+    forwards = [p for p in primers if p.is_forward]
+    reverses = [p for p in primers if !p.is_forward]
 
-    anymsa = root(first(forwards).msa)
-    all(root(p.msa) == anymsa for p in forwards) ||
-        throw(ArgumentError("All primers must refer to the same MSA"))
-    all(root(p.msa) == anymsa for p in reverses) ||
+    (isempty(forwards) || isempty(reverses)) && return Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
+
+    anymsa = root(first(primers).msa)
+    all(root(p.msa) == anymsa for p in primers) ||
         throw(ArgumentError("All primers must refer to the same MSA"))
 
     L = length(anymsa)
@@ -864,7 +876,10 @@ function best_pairs(
         use_nested = true
     end
 
-    @showprogress desc=rpad("Paring…", 20) enabled=(length(forwards)>1000) barlen=10 for f in forwards
+    pairs = Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
+    
+    total_comparisons = length(forwards) * length(reverses)
+    @showprogress desc=rpad("Paring…", 20) enabled=(total_comparisons > 10000) barlen=10 for f in forwards
         for r in reverses
             if f.pos.stop >= r.pos.start
                 # overlapping primers
