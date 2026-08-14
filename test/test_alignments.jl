@@ -90,10 +90,10 @@ using Random
 
         # Empty MSA properties
         msa_empty = MSA(String[])
-        @test nseqs(msa_empty) == 0
-        @test width(msa_empty) == 0
-        @test height(msa_empty) == 0
-        @test length(msa_empty) == 0
+        @test iszero(nseqs(msa_empty))
+        @test iszero(width(msa_empty))
+        @test iszero(height(msa_empty))
+        @test iszero(length(msa_empty))
         @test size(msa_empty) == (0, 0)
     end
 
@@ -244,8 +244,8 @@ using Random
         @test nucleotide_diversity(msa_deg_overlap) ≈ 0.75
 
         # Empty / Single
-        @test nucleotide_diversity(MSA(String[])) == 0.0
-        @test nucleotide_diversity(MSA(["ACGT"])) == 0.0
+        @test iszero(nucleotide_diversity(MSA(String[])))
+        @test iszero(nucleotide_diversity(MSA(["ACGT"])))
 
         # Large MSA sampling
         seqs_large = [Random.randstring("ACGT", 10) for _ in 1:250]

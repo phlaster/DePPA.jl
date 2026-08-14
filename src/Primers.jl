@@ -13,12 +13,12 @@ using ..Alignments
 using ProgressMeter
 using Statistics
 
-const GLOBAL_ADAPTERS = Ref{Union{Nothing, Pair{Oligo, Oligo}}}(nothing)
+const GLOBAL_ADAPTERS = Ref{Union{Nothing,Pair{Oligo,Oligo}}}(nothing)
 
 """
     setAdapters!() -> Nothing
-    setAdapters!(adapters::Pair{<:Oligo}) -> Nothing
-    setAdapters!(adapters::Pair{<:AbstractString}) -> Nothing
+    setAdapters!(adapters::Pair{<:Oligo, <:Oligo}) -> Nothing
+    setAdapters!(adapters::Pair{<:AbstractString, <:AbstractString}) -> Nothing
 
 Set the global adapter sequences to be automatically appended to the 5' ends of primers 
 during `construct_primers`. 
@@ -33,24 +33,24 @@ When global adapters are set, `construct_primers` will automatically concatenate
 candidate primers, recalculate ΔG at the primer's mean Tm, and discard candidates where 
 the adapter worsens ΔG by more than `max_dg_drop`.
 """
-function setAdapters!()
+function setAdapters!()::Nothing
     GLOBAL_ADAPTERS[] = nothing
     return nothing
 end
 
-function setAdapters!(adapters::Pair{<:Oligo, <:Oligo})
+function setAdapters!(adapters::Pair{<:Oligo,<:Oligo})::Nothing
     GLOBAL_ADAPTERS[] = adapters
     return nothing
 end
 
-function setAdapters!(adapters::Pair{<:AbstractString, <:AbstractString})
+function setAdapters!(adapters::Pair{<:AbstractString,<:AbstractString})::Nothing
     setAdapters!(Oligo(adapters.first, "Custom Fwd Adapter") => Oligo(
         adapters.second,
         "Custom Rev Adapter",
     ))
 end
 
-getAdapters() = GLOBAL_ADAPTERS[]
+getAdapters()::Union{Nothing,Pair{Oligo,Oligo}} = GLOBAL_ADAPTERS[]
 
 """
     AbstractPrimer{T<:Union{Oligo,DegenOligo}}
@@ -59,7 +59,7 @@ Represent the abstract supertype for PCR primers.
 
 See also [`Primer`](@ref).
 """
-abstract type AbstractPrimer{T <: Union{Oligo, DegenOligo}} end
+abstract type AbstractPrimer{T<:Union{Oligo,DegenOligo}} end
 
 """
     Primer{T} <: AbstractPrimer{T}
@@ -77,14 +77,14 @@ struct Primer{T} <: AbstractPrimer{T}
     tail_length::Int
     tm::@NamedTuple{
         mean::Float64,
-        conf::Tuple{Float64, Float64},
+        conf::Tuple{Float64,Float64},
         min::Float64,
         max::Float64,
     }
     dg::Float64
     gc::Float64
     slack::Float64
-    adapter::Union{Nothing, Oligo}
+    adapter::Union{Nothing,Oligo}
 end
 
 """
@@ -93,7 +93,7 @@ end
 Constructs a `Primer` with type parameter `{T}` without specifying an adapter.
 Automatically converts the `consensus` to type `T` and sets the `adapter` field to `nothing`.
 """
-Primer{T}(
+function Primer{T}(
     msa::AbstractMSA,
     pos::UnitRange{Int},
     is_forward::Bool,
@@ -103,18 +103,20 @@ Primer{T}(
     dg::Float64,
     gc::Float64,
     slack::Float64,
-) where {T <: Union{Oligo, DegenOligo}} = Primer{T}(
-    msa,
-    pos,
-    is_forward,
-    convert(T, consensus),
-    tail_length,
-    tm,
-    dg,
-    gc,
-    slack,
-    nothing,
-)
+)::Primer{T} where {T<:Union{Oligo,DegenOligo}}
+    return Primer{T}(
+        msa,
+        pos,
+        is_forward,
+        convert(T, consensus),
+        tail_length,
+        tm,
+        dg,
+        gc,
+        slack,
+        nothing,
+    )
+end
 
 """
     Primer(msa::AbstractMSA, pos::UnitRange{Int}, is_forward::Bool, consensus::T, tail_length::Int, tm, dg::Float64, gc::Float64, slack::Float64) where T
@@ -132,7 +134,7 @@ function Primer(
     dg::Float64,
     gc::Float64,
     slack::Float64,
-) where {T <: Union{Oligo, DegenOligo}}
+)::Primer{T} where {T<:Union{Oligo,DegenOligo}}
     return Primer{T}(
         msa,
         pos,
@@ -174,23 +176,23 @@ See also [`construct_primers`](@ref), [`consensus_degen`](@ref), [`setAdapters!`
 function Primer(
     msa::AbstractMSA,
     interval::UnitRange{Int};
-    is_forward::Bool = true,
-    tail_length::Int = 3,
-    max_samples::Int = 1000,
-    tm_conf_int = 0.8,
-    tm_conds = :pcr,
-    dg_temp = 37.0,
-    slack = 0.0,
-    max_dg_drop::Real = 1.0,
-    descr = "Primer for $(nseqs(msa)) seq MSA at positions $interval",
-)
-    _cons = consensus_degen(msa, interval; slack = slack)
+    is_forward::Bool=true,
+    tail_length::Int=3,
+    max_samples::Int=1000,
+    tm_conf_int=0.8,
+    tm_conds=:pcr,
+    dg_temp=37.0,
+    slack=0.0,
+    max_dg_drop::Real=1.0,
+    descr="Primer for $(nseqs(msa)) seq MSA at positions $interval",
+)::Primer{DegenOligo}
+    _cons = consensus_degen(msa, interval; slack=slack)
     gapped_cons = is_forward ? _cons : _ext_revcomp(_cons)
 
     if hasgaps(gapped_cons)
         throw(ArgumentError(
             "Cannot construct primer for interval $interval: " *
-                "consensus contains gaps (excessive gaps in MSA region).",
+            "consensus contains gaps (excessive gaps in MSA region).",
         ))
     end
 
@@ -198,22 +200,22 @@ function Primer(
 
     Tm = _ext_tm(
         underlying_oligo;
-        max_samples = max_samples,
-        conf_int = tm_conf_int,
-        conditions = tm_conds,
+        max_samples=max_samples,
+        conf_int=tm_conf_int,
+        conditions=tm_conds,
     )
-    delta_G = _ext_dg(underlying_oligo; max_samples = max_samples, temp = dg_temp)
+    delta_G = _ext_dg(underlying_oligo; max_samples=max_samples, temp=dg_temp)
     GC = _ext_gc_content(underlying_oligo)
 
     final_dg = delta_G
     adapter_to_add = nothing
 
     current_adapters = GLOBAL_ADAPTERS[]
-    if current_adapters !== nothing
+    if !isnothing(current_adapters)
         adapter_to_add = is_forward ? current_adapters.first : current_adapters.second
         full_oligo = adapter_to_add * underlying_oligo
 
-        final_dg = _ext_dg(full_oligo; max_samples = max_samples, temp = Tm.mean)
+        final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
 
         if (final_dg - delta_G) < -max_dg_drop
             @warn "Primer at $interval with adapter has a significant ΔG drop: $(round(final_dg - delta_G, digits = 2)) kcal/mol"
@@ -248,7 +250,7 @@ Since Julia structs are immutable, a new object is returned rather than mutating
 # Returns
 - A new `Primer` or `Pair{Primer, Primer}` with the updated description.
 """
-function reannotated(primer::Primer{T}, annotation::AbstractString) where {T}
+function reannotated(primer::Primer{T}, annotation::AbstractString)::Primer{T} where {T<:Union{Oligo,DegenOligo}}
     new_consensus = T(String(primer.consensus), String(annotation))
 
     return Primer{T}(
@@ -266,7 +268,7 @@ function reannotated(primer::Primer{T}, annotation::AbstractString) where {T}
 end
 
 function reannotated(
-    pair::Pair{<:AbstractPrimer, <:AbstractPrimer},
+    pair::Pair{<:AbstractPrimer,<:AbstractPrimer},
     annotation::AbstractString,
 )
     return reannotated(pair.first, annotation) => reannotated(pair.second, annotation)
@@ -275,43 +277,43 @@ end
 # These are overloaded in ext/SeqFoldExt.jl to load SeqFold.jl library dynamically
 _ext_revcomp(args...; kwargs...) = error(
     "Primer construction requires SeqFold library to be loaded.\n" *
-        "In order to get this functionality, please `]add SeqFold` to your project\n" *
-        "and load it with `using SeqFold` before constructing primers.",
+    "In order to get this functionality, please `]add SeqFold` to your project\n" *
+    "and load it with `using SeqFold` before constructing primers.",
 )
 _ext_tm(args...; kwargs...) = error(
     "Primer construction requires SeqFold library to be loaded.\n" *
-        "In order to get this functionality, please `]add SeqFold` to your project\n" *
-        "and load it with `using SeqFold` before constructing primers.",
+    "In order to get this functionality, please `]add SeqFold` to your project\n" *
+    "and load it with `using SeqFold` before constructing primers.",
 )
 _ext_dg(args...; kwargs...) = error(
     "Primer construction requires SeqFold library to be loaded.\n" *
-        "In order to get this functionality, please `]add SeqFold` to your project\n" *
-        "and load it with `using SeqFold` before constructing primers.",
+    "In order to get this functionality, please `]add SeqFold` to your project\n" *
+    "and load it with `using SeqFold` before constructing primers.",
 )
 _ext_gc_content(args...; kwargs...) = error(
     "Primer construction requires SeqFold library to be loaded.\n" *
-        "In order to get this functionality, please `]add SeqFold` to your project\n" *
-        "and load it with `using SeqFold` before constructing primers.",
+    "In order to get this functionality, please `]add SeqFold` to your project\n" *
+    "and load it with `using SeqFold` before constructing primers.",
 )
 
-Base.String(primer::AbstractPrimer) = primer.adapter === nothing ?
-    String(primer.consensus) :
-    String(primer.adapter) * String(primer.consensus)
-Base.length(primer::AbstractPrimer) = length(primer.consensus) +
-    (primer.adapter === nothing ? 0 : length(primer.adapter))
-Base.isempty(primer::AbstractPrimer) = isempty(primer.consensus)
+Base.String(primer::AbstractPrimer)::String = isnothing(primer.adapter) ?
+                                              String(primer.consensus) :
+                                              String(primer.adapter) * String(primer.consensus)
+Base.length(primer::AbstractPrimer)::Int = length(primer.consensus) +
+                                           (isnothing(primer.adapter) ? 0 : length(primer.adapter))
+Base.isempty(primer::AbstractPrimer)::Bool = isempty(primer.consensus)
 Base.iterate(primer::AbstractPrimer, state...) = iterate(String(primer), state...)
-Base.getindex(primer::AbstractPrimer, i::Int) = getindex(String(primer), i)
+Base.getindex(primer::AbstractPrimer, i::Int)::Char = getindex(String(primer), i)
 Base.getindex(primer::AbstractPrimer, r::UnitRange{Int}) = getindex(String(primer), r)
 
-Base.convert(::Type{DegenOligo}, primer::AbstractPrimer) = primer.consensus
+Base.convert(::Type{DegenOligo}, primer::AbstractPrimer) = convert(DegenOligo, primer.consensus)
 
-Oligos.n_unique_oligos(primer::AbstractPrimer) = n_unique_oligos(primer.consensus)
-Oligos.n_deg_pos(primer::AbstractPrimer) = n_deg_pos(primer.consensus)
-Oligos.description(primer::AbstractPrimer) = description(primer.consensus)
-Oligos.hasgaps(::AbstractPrimer) = false
+Oligos.n_unique_oligos(primer::AbstractPrimer)::BigInt = n_unique_oligos(primer.consensus)
+Oligos.n_deg_pos(primer::AbstractPrimer)::Int = n_deg_pos(primer.consensus)
+Oligos.description(primer::AbstractPrimer)::String = description(primer.consensus)
+Oligos.hasgaps(::AbstractPrimer)::Bool = false
 Oligos.nondegens(primer::AbstractPrimer) = nondegens(primer.consensus)
-Oligos.oligo_range(primer::AbstractPrimer) = primer.pos
+Oligos.oligo_range(primer::AbstractPrimer)::UnitRange{Int} = primer.pos
 
 """
     _has_nonspecific_match(primer_seq::AbstractString, msa::AbstractMSA, target_interval; min_identity=0.8) -> Bool
@@ -323,7 +325,7 @@ function _has_nonspecific_match(
     primer_seq::AbstractString,
     msa::AbstractMSA,
     target_interval::UnitRange{Int};
-    min_identity::Float64 = 0.8,
+    min_identity::Float64=0.8,
 )::Bool
     plen = length(primer_seq)
     L = width(msa)
@@ -336,8 +338,8 @@ function _has_nonspecific_match(
     threshold = plen * min_identity
 
     # Local function to slide a sequence over the MSA base count matrix
-    function _check_seq(seq::AbstractString)
-        for startpos in 1:(L - plen + 1)
+    function _check_seq(seq::AbstractString)::Bool
+        for startpos in 1:(L-plen+1)
             # Skip if the window overlaps with the target interval
             window_end = startpos + plen - 1
             if startpos <= target_interval.stop && window_end >= target_interval.start
@@ -415,12 +417,12 @@ Evaluates both forward and reverse complement orientations of the query.
 function miniblast(
     target_msa::AbstractMSA,
     query_oligo::AbstractDegen,
-    threshold::Real = 0.75,
+    threshold::Real=0.75,
 )::Vector{MiniBlastHit}
     q_ungapped_str = filter(!=('-'), String(query_oligo))
     plen = length(q_ungapped_str)
     L = width(target_msa)
-    (plen == 0 || plen > L) && return MiniBlastHit[]
+    (iszero(plen) || plen > L) && return MiniBlastHit[]
 
     q_oligo_ungapped = DegenOligo(q_ungapped_str)
     rc_str = String(_ext_revcomp(q_oligo_ungapped))
@@ -429,7 +431,7 @@ function miniblast(
     hits = MiniBlastHit[]
 
     function _search_strand(seq::AbstractString, strand::Symbol)
-        for startpos in 1:(L - plen + 1)
+        for startpos in 1:(L-plen+1)
             match_score = 0.0
             valid = true
 
@@ -455,7 +457,7 @@ function miniblast(
 
             if valid && match_score >= abs_match_threshold
                 identity = match_score / plen
-                push!(hits, MiniBlastHit(startpos:(startpos + plen - 1), strand, identity))
+                push!(hits, MiniBlastHit(startpos:(startpos+plen-1), strand, identity))
             end
         end
     end
@@ -463,7 +465,7 @@ function miniblast(
     _search_strand(q_ungapped_str, :forward)
     _search_strand(rc_str, :reverse)
 
-    sort!(hits, by = h -> h.identity, rev = true)
+    sort!(hits, by=h -> h.identity, rev=true)
     return hits
 end
 
@@ -502,27 +504,27 @@ See also [`best_pairs`](@ref), [`Primer`](@ref), [`consensus_degen`](@ref).
 """
 function construct_primers(
     msa::AbstractMSA;
-    is_forward::Bool = true,
-    length_range::UnitRange{Int} = 17:23,
-    tail_length::Int = 3,
-    tail_degen_pos::Int = 0,
-    head_degen_pos::Int = 5,
-    slack::Real = 0.05,
-    gc_range::UnitRange{Int} = 40:60,
-    tm_range::UnitRange{Int} = 55:60,
-    min_delta_g::Real = -5.0,
-    min_msadepth::Float64 = 0.75,
-    max_oligo_variants::Int = 100,
-    max_samples::Int = 5000,
-    tm_conf_int::Real = 0.2,
-    tm_conds = :pcr,
-    dg_temp::Real = mean(tm_range),
-    offtarget_reject_threshold::Real = 0.75,
-    max_dg_drop::Real = 1.0,
+    is_forward::Bool=true,
+    length_range::UnitRange{Int}=17:23,
+    tail_length::Int=3,
+    tail_degen_pos::Int=0,
+    head_degen_pos::Int=5,
+    slack::Real=0.05,
+    gc_range::UnitRange{Int}=40:60,
+    tm_range::UnitRange{Int}=55:60,
+    min_delta_g::Real=-5.0,
+    min_msadepth::Float64=0.75,
+    max_oligo_variants::Int=100,
+    max_samples::Int=5000,
+    tm_conf_int::Real=0.2,
+    tm_conds=:pcr,
+    dg_temp::Real=mean(tm_range),
+    offtarget_reject_threshold::Real=0.75,
+    max_dg_drop::Real=1.0,
     nested_pair::Union{
         Nothing,
-        Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int},
-    } = nothing,
+        Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
+    }=nothing,
 )::Vector{Primer{DegenOligo}}
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
@@ -545,7 +547,7 @@ function construct_primers(
     search_start::Int = 1
     search_end::Int = L
 
-    if nested_pair !== nothing
+    if !isnothing(nested_pair)
         flanking_pair, offset = nested_pair
         amp_start = flanking_pair.first.pos.start
         amp_stop = flanking_pair.second.pos.stop
@@ -607,9 +609,9 @@ function construct_primers(
 
     prog = Progress(
         length(length_range);
-        desc = rpad(is_forward ? "Constructing F…" : "Constructing R…", 20),
-        color = :white,
-        barlen = 10,
+        desc=rpad(is_forward ? "Constructing F…" : "Constructing R…", 20),
+        color=:white,
+        barlen=10,
     )
     l = ReentrantLock()
 
@@ -627,16 +629,16 @@ function construct_primers(
         end
 
         for startpos in actual_search_start:actual_search_end
-            interval::UnitRange{Int} = startpos:(startpos + len - 1)
+            interval::UnitRange{Int} = startpos:(startpos+len-1)
             depths = msadepth(msa, interval)
             any(<(min_msadepth), depths) && continue
 
             if is_forward
-                head_interval = startpos:(startpos + head_len - 1)
-                tail_interval = (startpos + head_len):(startpos + len - 1)
+                head_interval = startpos:(startpos+head_len-1)
+                tail_interval = (startpos+head_len):(startpos+len-1)
             else
-                head_interval = (startpos + tail_len):(startpos + len - 1)
-                tail_interval = startpos:(startpos + tail_len - 1)
+                head_interval = (startpos+tail_len):(startpos+len-1)
+                tail_interval = startpos:(startpos+tail_len-1)
             end
 
             if head_len > 0
@@ -651,16 +653,16 @@ function construct_primers(
                 tail_deg > tail_degen_pos && continue
             end
 
-            _cons = consensus_degen(msa, interval; slack = slack)
+            _cons = consensus_degen(msa, interval; slack=slack)
             hasgaps(_cons) && continue
 
             cons_str = String(parent(_cons))
             if _has_nonspecific_match(
-                    cons_str,
-                    msa,
-                    interval;
-                    min_identity = offtarget_reject_threshold,
-                )
+                cons_str,
+                msa,
+                interval;
+                min_identity=offtarget_reject_threshold,
+            )
                 continue
             end
 
@@ -674,14 +676,14 @@ function construct_primers(
             gc = _ext_gc_content(cons)
             !(gc_range.start / 100 <= gc <= gc_range.stop / 100) && continue
 
-            dg_val = _ext_dg(cons; max_samples = max_samples, temp = dg_temp)
+            dg_val = _ext_dg(cons; max_samples=max_samples, temp=dg_temp)
             dg_val < min_delta_g && continue
 
             Tm = _ext_tm(
                 cons;
-                max_samples = max_samples,
-                conf_int = tm_conf_int,
-                conditions = tm_conds,
+                max_samples=max_samples,
+                conf_int=tm_conf_int,
+                conditions=tm_conds,
             )
             (tm_range.stop < first(Tm.conf) || last(Tm.conf) < tm_range.start) && continue
 
@@ -689,13 +691,13 @@ function construct_primers(
             adapter_to_add = nothing
 
             current_adapters = GLOBAL_ADAPTERS[]
-            if current_adapters !== nothing
+            if !isnothing(current_adapters)
                 adapter_to_add = is_forward ?
-                    current_adapters.first :
-                    current_adapters.second
+                                 current_adapters.first :
+                                 current_adapters.second
                 full_oligo = adapter_to_add * cons
 
-                final_dg = _ext_dg(full_oligo; max_samples = max_samples, temp = Tm.mean)
+                final_dg = _ext_dg(full_oligo; max_samples=max_samples, temp=Tm.mean)
 
                 if (final_dg - dg_val) < -max_dg_drop
                     continue
@@ -748,21 +750,21 @@ Find the best matching pairs of forward and reverse primers.
   - If `offset > 0`, only pairs with the forward primer upstream and reverse primer downstream of the flanking amplicon (plus the offset margin) are considered.
 
 # Returns
-- `Vector{Pair{Primer{DegenOligo}}}`: A sorted list of valid primer pairs, ordered by the smallest difference in mean Tm.
+- `Vector{Pair{Primer{DegenOligo}, Primer{DegenOligo}}}`: A sorted list of valid primer pairs, ordered by the smallest difference in mean Tm.
 
 See also [`construct_primers`](@ref), [`Primer`](@ref).
 """
 function best_pairs(
     forwards::Vector{<:Primer},
     reverses::Vector{<:Primer};
-    amplicon_len::UnitRange{Int} = 0:9999,
-    max_tm_diff::Real = 4.0,
+    amplicon_len::UnitRange{Int}=0:9999,
+    max_tm_diff::Real=4.0,
     nested_pair::Union{
         Nothing,
-        Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int},
-    } = nothing,
-)::Vector{Pair{Primer{DegenOligo}, Primer{DegenOligo}}}
-    pairs = Pair{Primer{DegenOligo}, Primer{DegenOligo}}[]
+        Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
+    }=nothing,
+)::Vector{Pair{Primer{DegenOligo},Primer{DegenOligo}}}
+    pairs = Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
     (isempty(forwards) || isempty(reverses)) && return pairs
 
     all(p -> p.is_forward, forwards) ||
@@ -782,11 +784,11 @@ function best_pairs(
     nested_amp_stop = 0
     nested_offset = 0
 
-    if nested_pair !== nothing
+    if !isnothing(nested_pair)
         flanking_pair, offset = nested_pair
 
         if root(flanking_pair.first.msa) != anymsa ||
-                root(flanking_pair.second.msa) != anymsa
+           root(flanking_pair.second.msa) != anymsa
             throw(ArgumentError("Flanking pair must refer to the same MSA as the primers"))
         end
 
@@ -819,8 +821,8 @@ function best_pairs(
             end
         elseif nested_offset > 0
             min_theoretical_amplicon = (nested_amp_stop + nested_offset) -
-                (nested_amp_start - nested_offset) +
-                1
+                                       (nested_amp_start - nested_offset) +
+                                       1
             if maximum(amplicon_len) < min_theoretical_amplicon
                 throw(ArgumentError(
                     "Specified amplicon_len max ($(maximum(amplicon_len))) is smaller than the minimum possible outer amplicon length ($min_theoretical_amplicon)",
@@ -831,9 +833,7 @@ function best_pairs(
         use_nested = true
     end
 
-    @showprogress desc = rpad("Paring…", 20) enabled = (
-        length(forwards) > 1000
-    ) barlen = 10 for f in forwards
+    @showprogress desc=rpad("Paring…", 20) enabled=(length(forwards)>1000) barlen=10 for f in forwards
         for r in reverses
             if f.pos.stop >= r.pos.start
                 # overlapping primers
@@ -852,12 +852,12 @@ function best_pairs(
             if use_nested
                 if nested_offset < 0
                     if f.pos.start < nested_amp_start - nested_offset ||
-                            r.pos.stop > nested_amp_stop + nested_offset
+                       r.pos.stop > nested_amp_stop + nested_offset
                         continue
                     end
                 elseif nested_offset > 0
                     if f.pos.stop >= nested_amp_start - nested_offset ||
-                            r.pos.start <= nested_amp_stop + nested_offset
+                       r.pos.start <= nested_amp_stop + nested_offset
                         continue
                     end
                 end
@@ -867,7 +867,7 @@ function best_pairs(
         end
     end
 
-    sort!(pairs; by = p -> abs(p.first.tm.mean - p.second.tm.mean))
+    sort!(pairs; by=p -> abs(p.first.tm.mean - p.second.tm.mean))
     return pairs
 end
 
@@ -899,35 +899,35 @@ The vectorized method optimizes performance by caching ΔG calculations for prim
 appear in multiple pairs.
 """
 function add_illumina_adapters(
-    pair::Pair{<:AbstractPrimer, <:AbstractPrimer},
+    pair::Pair{<:AbstractPrimer,<:AbstractPrimer},
     fwd_adapter::AbstractString,
     rev_adapter::AbstractString;
-    max_dg_drop::Real = 1.0,
-)::Union{Nothing, Pair{Primer{DegenOligo}, Primer{DegenOligo}}}
-    res = add_illumina_adapters([pair], fwd_adapter, rev_adapter; max_dg_drop = max_dg_drop)
+    max_dg_drop::Real=1.0,
+)::Union{Nothing,Pair{Primer{DegenOligo},Primer{DegenOligo}}}
+    res = add_illumina_adapters([pair], fwd_adapter, rev_adapter; max_dg_drop=max_dg_drop)
     return isempty(res) ? nothing : first(res)
 end
 
 function add_illumina_adapters(
-    pairs::AbstractVector{<:Pair{<:AbstractPrimer, <:AbstractPrimer}},
+    pairs::AbstractVector{<:Pair{<:AbstractPrimer,<:AbstractPrimer}},
     fwd_adapter::AbstractString,
     rev_adapter::AbstractString;
-    max_dg_drop::Real = 1.0,
-)::Vector{Pair{Primer{DegenOligo}, Primer{DegenOligo}}}
+    max_dg_drop::Real=1.0,
+)::Vector{Pair{Primer{DegenOligo},Primer{DegenOligo}}}
 
     fwd_ad = Oligo(fwd_adapter, "Illumina_Fwd_Adapter")
     rev_ad = Oligo(rev_adapter, "Illumina_Rev_Adapter")
 
-    cache = IdDict{AbstractPrimer, Union{Nothing, Primer{DegenOligo}}}()
+    cache = IdDict{AbstractPrimer,Union{Nothing,Primer{DegenOligo}}}()
 
-    function _process_primer(p::AbstractPrimer, adapter::Oligo)
+    function _process_primer(p::AbstractPrimer, adapter::Oligo)::Union{Nothing,Primer{DegenOligo}}
         if haskey(cache, p)
             return cache[p]
         end
 
         temp = p.tm.mean
         full_oligo = adapter * p.consensus
-        dg_full = _ext_dg(full_oligo; max_samples = 1000, temp = temp)
+        dg_full = _ext_dg(full_oligo; max_samples=1000, temp=temp)
 
         if (dg_full - p.dg) < -max_dg_drop
             cache[p] = nothing
@@ -951,7 +951,7 @@ function add_illumina_adapters(
         return new_p
     end
 
-    full_pairs = Pair{Primer{DegenOligo}, Primer{DegenOligo}}[]
+    full_pairs = Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
 
     for pp in pairs
         f_new = _process_primer(pp.first, fwd_ad)
@@ -966,7 +966,7 @@ function add_illumina_adapters(
     return full_pairs
 end
 
-function Base.convert(::Type{Primer{T1}}, p::Primer{T2}) where {T1, T2}
+function Base.convert(::Type{Primer{T1}}, p::Primer{T2})::Primer{T1} where {T1<:Union{Oligo,DegenOligo},T2<:Union{Oligo,DegenOligo}}
     T2 === T1 && return p
     return Primer{T1}(
         p.msa,
@@ -983,14 +983,19 @@ function Base.convert(::Type{Primer{T1}}, p::Primer{T2}) where {T1, T2}
 end
 
 function Base.convert(
-    ::Type{Pair{Primer{T3}, Primer{T3}}},
-    p::Pair{Primer{T1}, Primer{T2}},
-) where {T1, T2, T3}
+    ::Type{Pair{Primer{T3},Primer{T3}}},
+    p::Pair{Primer{T1},Primer{T2}},
+)::Pair{Primer{T3},Primer{T3}} where {T1<:Union{Oligo,DegenOligo},T2<:Union{Oligo,DegenOligo},T3<:Union{Oligo,DegenOligo}}
     T1 === T3 && T2 === T3 && return p
     return Pair(convert(Primer{T3}, p.first), convert(Primer{T3}, p.second))
 end
 
-Base.convert(::Type{Pair{Primer}}, p::Pair{<:AbstractPrimer, <:AbstractPrimer}) = p
+function Base.convert(
+    ::Type{Pair{T1,T2}},
+    p::Pair{<:AbstractPrimer,<:AbstractPrimer},
+)::Pair{T1,T2} where {T1<:AbstractPrimer,T2<:AbstractPrimer}
+    return convert(T1, p.first) => convert(T2, p.second)
+end
 
 include("show_primers.jl")
 include("export_primers.jl")

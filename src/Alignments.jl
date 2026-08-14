@@ -441,7 +441,7 @@ See also [`msadepth`](@ref), [`get_base_count`](@ref).
 function msadet(msa::AbstractMSA, pos::Int)::Float64
     v = get_base_count(msa, pos)
     s = min(1.0, sum(v))
-    s == 0.0 ? 0.0 : maximum(v) / s
+    iszero(s) ? 0.0 : maximum(v) / s
 end
 function msadet(msa::AbstractMSA, interval::UnitRange{Int})::Vector{Float64}
     return [msadet(msa, pos) for pos in interval]
@@ -579,7 +579,7 @@ function nucleotide_diversity(
     max_pairs::Int = 10000,
 )::Float64
     L = length(msa)
-    L == 0 && return 0.0
+    iszero(L) && return 0.0
     n = nseqs(msa)
     n < 2 && return 0.0
 
@@ -656,7 +656,7 @@ function _pairwise_distance(
         match_prob = sum(probs_i .* probs_j)
         diff_sum += 1.0 - match_prob
     end
-    total_sites == 0 ? 0.0 : diff_sum / total_sites
+    iszero(total_sites) ? 0.0 : diff_sum / total_sites
 end
 
 include("show_msa.jl")

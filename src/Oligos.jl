@@ -187,7 +187,7 @@ end
 #### NonDegenIterator ####
 function Base.iterate(iter::NonDegenIterator)
     oligo = parent(iter)
-    length(oligo) == 0 && return nothing
+    iszero(length(oligo)) && return nothing
 
     options = [IUPAC_B2V[c] for c in String(oligo)]
     lens = length.(options)
@@ -204,7 +204,7 @@ function Base.iterate(iter::NonDegenIterator)
 end
 function Base.iterate(iter::NonDegenIterator, state)
     indices, options, lens, buffer, n = state
-    n == 0 && return nothing
+    iszero(n) && return nothing
 
     pos = n
     @inbounds while pos > 0
@@ -213,7 +213,7 @@ function Base.iterate(iter::NonDegenIterator, state)
         indices[pos] = 1
         pos -= 1
     end
-    pos == 0 && return nothing
+    iszero(pos) && return nothing
 
     @inbounds @simd for j in 1:n
         buffer[j] = options[j][indices[j]]
@@ -314,7 +314,7 @@ function Base.String(go::GappedOligo)
     return String(buffer)
 end
 
-Base.iterate(go::GappedOligo) = length(go) == 0 ? nothing : iterate(go, (1, 1, 1, 0))
+Base.iterate(go::GappedOligo) = iszero(length(go)) ? nothing : iterate(go, (1, 1, 1, 0))
 function Base.iterate(go::GappedOligo, state::NTuple{4, Int})
     pos, ungapped_pos, gap_idx, remaining = state
     if pos > length(go)
@@ -325,13 +325,13 @@ function Base.iterate(go::GappedOligo, state::NTuple{4, Int})
         char = '-'
         new_remaining = remaining - 1
         new_ungapped = ungapped_pos
-        new_gap_idx = new_remaining == 0 ? gap_idx + 1 : gap_idx
+        new_gap_idx = iszero(new_remaining) ? gap_idx + 1 : gap_idx
     elseif gap_idx <= length(gaps) && ungapped_pos == gaps[gap_idx].first
         _, len = gaps[gap_idx]
         char = '-'
         new_remaining = len - 1
         new_ungapped = ungapped_pos
-        new_gap_idx = new_remaining == 0 ? gap_idx + 1 : gap_idx
+        new_gap_idx = iszero(new_remaining) ? gap_idx + 1 : gap_idx
     else
         if ungapped_pos > length(parent(go))
             throw(BoundsError(parent(go), ungapped_pos))
@@ -343,7 +343,7 @@ function Base.iterate(go::GappedOligo, state::NTuple{4, Int})
     end
     return char, (pos + 1, new_ungapped, new_gap_idx, new_remaining)
 end
-Base.iterate(oligo::AbstractOligo) = length(oligo) == 0 ? nothing : (oligo[1], 2)
+Base.iterate(oligo::AbstractOligo) = iszero(length(oligo)) ? nothing : (oligo[1], 2)
 Base.iterate(oligo::AbstractOligo, i::Int) = i > length(oligo) ? nothing : (oligo[i], i + 1)
 
 Base.parent(oligo::AbstractOligo) = oligo
@@ -403,7 +403,7 @@ Base.isvalid(::Type{GappedOligo}, s::AbstractString) = all(
 Base.length(oligo::AbstractOligo) = length(String(oligo))
 Base.length(go::GappedOligo) = go.total_length
 Base.length(ov::OligoView) = length(oligo_range(ov))
-Base.isempty(oligo::AbstractOligo) = length(oligo) == 0
+Base.isempty(oligo::AbstractOligo) = iszero(length(oligo))
 Base.lastindex(oligo::AbstractOligo) = length(oligo)
 
 """
@@ -554,7 +554,7 @@ function nondegens(go::GappedOligo)
     return GappedNonDegenIterator(NonDegenIterator(parent(go)), go.gaps, go.total_length)
 end
 
-nondegens(deg::DegenOligo) = n_deg_pos(deg) == 0 ?
+nondegens(deg::DegenOligo) = iszero(n_deg_pos(deg)) ?
     nondegens(Oligo(deg)) :
     NonDegenIterator(deg)
 nondegens(ov::OligoView{T}) where {T} = nondegens(T(ov))
@@ -568,7 +568,7 @@ See also [`sampleView`](@ref), [`sampleNondeg`](@ref).
 """
 function sampleChar(oligo::AbstractOligo)
     n = length(oligo)
-    n == 0 && throw(ArgumentError("Cannot sample character from empty oligomer"))
+    iszero(n) && throw(ArgumentError("Cannot sample character from empty oligomer"))
     return oligo[rand(1:n)]
 end
 

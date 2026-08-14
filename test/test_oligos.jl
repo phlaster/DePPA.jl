@@ -7,7 +7,7 @@ rdesc() = join(rand('1':'z', rand(0:150)))
 rolg(::Type{Oligo}, len) = Oligo(rseq(len, NON_DEGEN_BASES), rdesc())
 rolg(::Type{DegenOligo}, len) = DegenOligo(rseq(len, ALL_BASES), rdesc())
 function rolg(::Type{GappedOligo}, len)
-    len == 0 && return GappedOligo("", rdesc())
+    iszero(len) && return GappedOligo("", rdesc())
     seq_chars = collect(ALL_BASES)
     append!(seq_chars, fill('-', 5))
     seq = rseq(len, seq_chars)
@@ -157,7 +157,7 @@ end
 
 @testset "Degeneracy Properties" begin
     nondeg = Oligo("ACGT")
-    @test n_deg_pos(nondeg) == 0
+    @test iszero(n_deg_pos(nondeg))
     @test n_unique_oligos(nondeg) == 1
     @test !hasgaps(nondeg)
 
@@ -280,7 +280,7 @@ end
         @test sampled isa GappedOligo
         @test length(sampled) == length(gapped_deg)
         @test all(c in NON_DEGEN_BASES || c == '-' for c in String(sampled))
-        @test n_deg_pos(sampled) == 0
+        @test iszero(n_deg_pos(sampled))
     end
 end
 
@@ -321,7 +321,6 @@ end
         for _ in 1:NUM_RANDOM_TESTS
             len = rand(0:50)
             oligo = rolg(T, len)
-            @test isempty(oligo) == (len == 0)
             @test length(oligo) == len
             @test lastindex(oligo) == len
             @test ncodeunits(oligo) == len

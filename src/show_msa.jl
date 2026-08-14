@@ -78,13 +78,13 @@ end
 
 function Base.show(io::IO, msa::AbstractMSA)
     n_sequences = nseqs(msa)
-    if n_sequences == 0
+    if iszero(n_sequences)
         print(io, "Empty ", typeof(msa))
         return
     end
     seq_length = length(msa)
     print(io, typeof(msa), " with $n_sequences sequences of length $seq_length")
-    seq_length == 0 && return
+    iszero(seq_length) && return
 
     terminal_height, terminal_width = displaysize(io)
 
@@ -257,16 +257,16 @@ function Base.show(io::IO, msa::AbstractMSA)
     end
 
     @inbounds for (rel_idx, abs_pos) in enumerate(abs_cols)
-        if abs_pos % 10 == 0 && num_line_chars[rel_idx] == ' '
+        if iszero(abs_pos % 10) && num_line_chars[rel_idx] == ' '
             num_line_chars[rel_idx] = '·'
         end
-        if abs_pos % 50 == 0 && num_line_chars[rel_idx] == '·'
+        if iszero(abs_pos % 50) && num_line_chars[rel_idx] == '·'
             num_line_chars[rel_idx] = '⌢'
         end
-        if abs_pos % 100 == 0 && num_line_chars[rel_idx] == '⌢'
+        if iszero(abs_pos % 100) && num_line_chars[rel_idx] == '⌢'
             num_line_chars[rel_idx] = ':'
         end
-        if abs_pos % 1000 == 0 && num_line_chars[rel_idx] == ':'
+        if iszero(abs_pos % 1000) && num_line_chars[rel_idx] == ':'
             num_line_chars[rel_idx] = '∴'
         end
     end

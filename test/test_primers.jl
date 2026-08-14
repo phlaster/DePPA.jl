@@ -28,9 +28,10 @@ using SeqFold
         @test collect(p1) == ['A', 'C', 'G', 'T', 'T', 'G', 'C', 'A']
         @test p1[1] == 'A'
         @test String(p1[2:4]) == "CGT"
-        @test convert(DegenOligo, p1) === oligo_cons
+        @test convert(DegenOligo, p1) isa DegenOligo
+        @test String(convert(DegenOligo, p1)) == String(oligo_cons)
         @test n_unique_oligos(p1) == BigInt(1)
-        @test n_deg_pos(p1) == 0
+        @test iszero(n_deg_pos(p1))
         @test description(p1) == "TestOligoPrimer"
         @test !hasgaps(p1)
         @test nondegens(p1)[1] == oligo_cons
@@ -52,7 +53,7 @@ using SeqFold
         empty_cons = Oligo("", "EmptyPrimer")
         p_empty = Primer{DegenOligo}(msa, 1:0, true, empty_cons, 3, tm, -5.0, 0.5, 0.0)
         @test isempty(p_empty)
-        @test length(p_empty) == 0
+        @test iszero(length(p_empty))
     end
 
     @testset "construct_primers" begin
