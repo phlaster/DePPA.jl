@@ -533,7 +533,7 @@ function construct_primers(
     offtarget_reject_threshold::Real=0.75,
     adapter_pair = GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
-    negative_msa::Vector{<:AbstractMSA}=AbstractMSA[],
+    negative_msa::Vector{<:AbstractMSA}=MSA[],
     nested_pair::Union{
         Nothing,
         Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
@@ -794,6 +794,7 @@ Find the best matching pairs of forward and reverse primers from a single vector
   - If `nothing` or `offset == 0`, performs normal pairing.
   - If `offset < 0`, only pairs entirely inside the flanking pair's amplicon (minus the offset margin) are considered.
   - If `offset > 0`, only pairs with the forward primer upstream and reverse primer downstream of the flanking amplicon (plus the offset margin) are considered.
+- `sortby::Symbol`: rule to sort the resulting vector (`:default`, `:tm_diff`, `:tm`, `:startpos`, `:length`).
 
 # Returns
 - `Vector{Pair{Primer{DegenOligo}, Primer{DegenOligo}}}`: A sorted list of valid primer pairs, ordered by the smallest difference in mean Tm.
