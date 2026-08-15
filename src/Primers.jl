@@ -488,23 +488,25 @@ Construct a list of candidate primers (both forward and reverse) from an MSA bas
 
 # Arguments
 - `msa::AbstractMSA`: The multiple sequence alignment.
-- `length_range::UnitRange{Int}=17:23`: Allowed primer lengths.
-- `tail_length::Int=3`: Length of the 3' tail region.
-- `head_degen_pos::Int=5`: Maximum allowed degenerate positions in the 5' head region.
-- `tail_degen_pos::Int=0`: Maximum allowed degenerate positions in the 3' tail region.
+- `length_range::UnitRange{<:Integer}=17:23`: Allowed primer lengths.
+- `tail_length::Integer=3`: Length of the 3' tail region.
+- `head_degen_pos::Integer=5`: Maximum allowed degenerate positions in the 5' head region.
+- `tail_degen_pos::Integer=0`: Maximum allowed degenerate positions in the 3' tail region.
 - `slack::Real=0.05`: Minimum frequency threshold for including a base in the degenerate consensus.
-- `gc_range::UnitRange{Int}=40:60`: Allowed GC content percentage range.
-- `tm_range::UnitRange{Int}=55:60`: Allowed melting temperature (Tm) range.
+- `gc_range::UnitRange{<:Integer}=40:60`: Allowed GC content percentage range.
+- `tm_range::UnitRange{<:Integer}=55:60`: Allowed melting temperature (Tm) range.
 - `min_delta_g::Real=-5.0`: Minimum allowed free energy (ΔG) at `dg_temp`.
-- `min_msadepth::Float64=0.75`: Minimum sequence depth (coverage) required across the primer region.
-- `max_oligo_variants::Int=100`: Maximum number of unique sequences the degenerate primer can represent.
-- `max_samples::Int=5000`: Number of samples for Monte Carlo estimation of Tm and ΔG.
+- `min_msadepth::Real=0.75`: Minimum sequence depth (coverage) required across the primer region.
+- `max_oligo_variants::Integer=100`: Maximum number of unique sequences the degenerate primer can represent.
+- `max_samples::Integer=5000`: Number of samples for Monte Carlo estimation of Tm and ΔG.
 - `tm_conf_int::Real=0.2`: Confidence interval for Tm.
 - `tm_conds=:pcr`: Thermodynamic conditions for Tm calculation.
 - `dg_temp::Real=mean(tm_range)`: Temperature for ΔG calculation.
-- `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding. If a candidate primer matches another region in the MSA (or any `negative_msa`) with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations.
-- `negative_msa::Vector{<:AbstractMSA}=AbstractMSA[]`: A vector of negative alignments. Candidate primers are checked against these alignments, and any primer matching with an average probability greater than or equal to `offtarget_reject_threshold` is discarded.
-- `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Int}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
+- `offtarget_reject_threshold::Real=0.75`: Maximum allowed average match probability for off-target binding **in the original MSA**. If a candidate primer matches another region in the MSA (outside its target interval) with an average probability greater than or equal to this threshold, it is discarded. Checks both forward and reverse complement orientations. This threshold does **not** apply to `negative_msa` alignments — each of those carries its own individual threshold.
+- `adapter_pair`: Optional adapter pair from `GLOBAL_ADAPTERS[]`.
+- `max_dg_drop::Real=1.0`: Maximum allowed ΔG drop when adapter is appended.
+- `negative_msa::Vector{Tuple{<:AbstractMSA, <:Real}}=Tuple{<:AbstractMSA, <:Real}[]`: A vector of tuples, each containing a negative alignment and its **individual** off-target reject threshold. Candidate primers are checked against each alignment using its corresponding threshold, and any primer matching with an average probability greater than or equal to that threshold is discarded.
+- `nested_pair::Union{Nothing, Tuple{Pair{<:AbstractPrimer, <:AbstractPrimer}, Integer}}=nothing`: An optional tuple specifying a flanking primer pair and an offset for nested PCR design.
   - If `nothing` or `offset == 0`, constructs primers across the entire MSA.
   - If `offset < 0`, constructs primers strictly inside the flanking pair's amplicon boundaries, shrunk by the absolute value of the offset.
   - If `offset > 0`, constructs forward primers upstream of the flanking amplicon (with the given offset) and reverse primers downstream.
@@ -516,36 +518,34 @@ See also [`best_pairs`](@ref), [`Primer`](@ref), [`consensus_degen`](@ref).
 """
 function construct_primers(
     msa::AbstractMSA;
-    length_range::UnitRange{Int}=17:23,
-    tail_length::Int=3,
-    tail_degen_pos::Int=0,
-    head_degen_pos::Int=5,
+    length_range::UnitRange{<:Integer}=17:23,
+    tail_length::Integer=3,
+    tail_degen_pos::Integer=0,
+    head_degen_pos::Integer=5,
     slack::Real=0.05,
-    gc_range::UnitRange{Int}=40:60,
-    tm_range::UnitRange{Int}=55:60,
+    gc_range::UnitRange{<:Integer}=40:60,
+    tm_range::UnitRange{<:Integer}=55:60,
     min_delta_g::Real=-5.0,
-    min_msadepth::Float64=0.75,
-    max_oligo_variants::Int=100,
-    max_samples::Int=5000,
+    min_msadepth::Real=0.75,
+    max_oligo_variants::Integer=100,
+    max_samples::Integer=5000,
     tm_conf_int::Real=0.2,
     tm_conds=:pcr,
     dg_temp::Real=mean(tm_range),
     offtarget_reject_threshold::Real=0.75,
-    adapter_pair = GLOBAL_ADAPTERS[],
+    adapter_pair=GLOBAL_ADAPTERS[],
     max_dg_drop::Real=1.0,
-    negative_msa::Vector{<:AbstractMSA}=MSA[],
-    nested_pair::Union{
-        Nothing,
-        Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
-    }=nothing,
+    negative_msa::Vector{Tuple{<:AbstractMSA,<:Real}}=Tuple{MSA,Float64}[],
+    nested_pair::Union{Nothing,Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Integer}}=nothing,
 )::Vector{Primer{DegenOligo}}
+
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
     1 ≤ max_oligo_variants || throw(ArgumentError("max_oligo_variants must be at least 1"))
     2 ≤ minimum(length_range) ||
         throw(ArgumentError("lower bound of length_range must be ≥ 2nt"))
     0 ≤ tail_length ≤ minimum(length_range) ||
-        throw(ArgumentError("tail_length must be [0, length_range.start]"))
+        throw(ArgumentError("tail_length must be in [0, length_range.start]"))
     0 ≤ gc_range.start ≤ gc_range.stop ≤ 100 ||
         throw(ArgumentError("gc_range must be in [0, 100]"))
     0 ≤ tm_range.start ≤ tm_range.stop ≤ 100 ||
@@ -553,16 +553,21 @@ function construct_primers(
     0 ≤ offtarget_reject_threshold ≤ 1 ||
         throw(ArgumentError("offtarget_reject_threshold must be in [0,1]"))
 
+    for (_, neg_threshold) in negative_msa
+        0 ≤ neg_threshold ≤ 1 ||
+            throw(ArgumentError("each negative_msa threshold must be in [0,1]"))
+    end
+
     L = length(msa)
     base_count = get_base_count(msa)
 
     # 1. Generate all valid candidate intervals
-    candidates = Tuple{UnitRange{Int}, Bool}[]
+    candidates = Tuple{UnitRange{Int},Bool}[]
 
     if isnothing(nested_pair) || nested_pair[2] == 0
         for len in length_range
             len > L && continue
-            for startpos in 1:(L - len + 1)
+            for startpos in 1:(L-len+1)
                 push!(candidates, (startpos:(startpos+len-1), true))
                 push!(candidates, (startpos:(startpos+len-1), false))
             end
@@ -598,7 +603,7 @@ function construct_primers(
 
             for len in length_range
                 len > (search_end - search_start + 1) && continue
-                for startpos in search_start:(search_end - len + 1)
+                for startpos in search_start:(search_end-len+1)
                     push!(candidates, (startpos:(startpos+len-1), true))
                     push!(candidates, (startpos:(startpos+len-1), false))
                 end
@@ -634,12 +639,12 @@ function construct_primers(
 
             for len in length_range
                 if len <= fwd_end - fwd_start + 1
-                    for startpos in fwd_start:(fwd_end - len + 1)
+                    for startpos in fwd_start:(fwd_end-len+1)
                         push!(candidates, (startpos:(startpos+len-1), true))
                     end
                 end
                 if len <= rev_end - rev_start + 1
-                    for startpos in rev_start:(rev_end - len + 1)
+                    for startpos in rev_start:(rev_end-len+1)
                         push!(candidates, (startpos:(startpos+len-1), false))
                     end
                 end
@@ -648,7 +653,7 @@ function construct_primers(
     end
 
     # 2. Define thread-safe evaluation logic
-    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)::Union{Nothing, Primer{DegenOligo}}
+    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)::Union{Nothing,Primer{DegenOligo}}
         len = length(interval)
         tail_len = min(tail_length, len)
         head_len = len - tail_len
@@ -690,14 +695,14 @@ function construct_primers(
             return nothing
         end
 
-        # Check negative MSAs for off-targets
+        # Check negative MSAs for off-targets using their individual thresholds
         if !isempty(negative_msa)
-            for neg_msa in negative_msa
+            for (neg_msa, neg_threshold) in negative_msa
                 if _has_nonspecific_match(
                     cons_str,
                     neg_msa,
                     nothing;
-                    min_identity=offtarget_reject_threshold,
+                    min_identity=neg_threshold,
                 )
                     return nothing
                 end
@@ -763,7 +768,7 @@ function construct_primers(
     l = ReentrantLock()
     primers = Primer{DegenOligo}[]
 
-    Threads.@threads for idx in 1:length(candidates)
+    Threads.@threads for idx in eachindex(candidates)
         interval, is_forward = candidates[idx]
         p = _evaluate(interval, is_forward)
 
@@ -882,7 +887,7 @@ function best_pairs(
     end
 
     pairs = Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
-    
+
     total_comparisons = length(forwards) * length(reverses)
     @showprogress desc=rpad("Paring…", 20) enabled=(total_comparisons > 10000) barlen=10 for f in forwards
         for r in reverses
