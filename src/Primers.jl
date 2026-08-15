@@ -808,7 +808,11 @@ function best_pairs(
         Nothing,
         Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
     }=nothing,
+    sortby::Symbol=:default
 )::Vector{Pair{Primer{DegenOligo},Primer{DegenOligo}}}
+    allowed_sort_symbols = (:default, :tm_diff, :tm, :startpos, :length)
+    sortby in allowed_sort_symbols || throw(ArgumentError("Allowed `sortby` values: $allowed_sort_symbols"))
+
     isempty(primers) && return Pair{Primer{DegenOligo},Primer{DegenOligo}}[]
 
     # Separate forwards and reverses
@@ -913,7 +917,17 @@ function best_pairs(
         end
     end
 
-    sort!(pairs; by=p -> abs(p.first.tm.mean - p.second.tm.mean))
+    if sortby == :default
+        nothing
+    elseif sortby == :tm_diff
+        sort!(pairs; by=p -> abs(p.first.tm.mean - p.second.tm.mean))
+    elseif sortby == :tm
+        sort!(pairs; by=p -> (p.first.tm.mean + p.second.tm.mean)/2)
+    elseif sortby == :startpos
+        sort!(pairs; by=p -> p.first.pos.start)
+    elseif sortby == :length
+        sort!(pairs; by=p -> p.second.pos.stop - p.first.pos.start + 1)
+    end
     return pairs
 end
 
