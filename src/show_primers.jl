@@ -81,7 +81,7 @@ function Base.show(io::IO, ::MIME"text/plain", primer::AbstractPrimer)
     println(io, "$dir_str $deg_status")
 
     L = length(primer.msa)
-    s, _..., e = primer.pos
+    s, e = first(primer.pos), last(primer.pos)
     term_width = displaysize(io)[2] - 1
     bar_start = "|"
     bar_end = string(L, '|')

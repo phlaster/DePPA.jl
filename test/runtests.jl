@@ -15,6 +15,14 @@ Random.seed!(42)
     @testset "Code linting (JET.jl)" JET.test_package(DePPA; target_modules = (DePPA,))
     @testset "Oligos" include("test_oligos.jl")
     @testset "Alignments" include("test_alignments.jl")
+
+    @testset "Extension Hooks Fallback" begin
+        @test_throws ErrorException Primers._ext_revcomp("A")
+        @test_throws ErrorException Primers._ext_tm(Oligo("A"); max_samples=1, conf_int=0.8, conditions=:pcr)
+        @test_throws ErrorException Primers._ext_dg(Oligo("A"); max_samples=1, temp=37.0)
+        @test_throws ErrorException Primers._ext_gc_content(Oligo("A"))
+    end
+
     @testset "Primers" include("test_primers.jl")
     @testset "Real pipeline" include("test_pipeline.jl")
     @testset "Show methods" include("test_show.jl")
