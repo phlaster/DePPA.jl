@@ -98,7 +98,7 @@ julia> using SeqFold, MAFFT_jll
 julia> setMSAShowStyle!(:bw);
 
 # Optional: set the consensus type shown above the MSA (:major, :degen)
-julia> setMSAconsensusShowType!(:major); 
+julia> setMSAconsensusShowType!(:major);
 ```
 
 ### 1. Load and Align Sequences
@@ -119,9 +119,9 @@ julia> data = """>1
                TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAA
                GCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTAG""";
 
-julia> temp_file = tempname(); open(temp_file, "w") do f write(f, data) end;
+julia> temp_fasta = tempname(); open(temp_fasta, "w") do f write(f, data) end;
 
-julia> alignment = MSA(temp_file; mafft=true)
+julia> alignment = MSA(temp_fasta; mafft=true)
 MSA with 5 sequences of length 86:
    CATCTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTT--
 1 >G..C.....T.................C....................C.................................----
@@ -133,62 +133,80 @@ MSA with 5 sequences of length 86:
 ```
 
 ### 2. Construct Degenerate Primers
-The engine scans the alignment, filtering candidates based on $GC$ content, $T_m$, and $\Delta G$ distributions.
+The engine scans the alignment, filtering candidates based on reasonable default parameters, but you always can adjust them. Reach to the documentation for further details.
+Custom `Base.show` method for Vector with primers facilitates the crude preview of forward and reverse primer distribution for the alignment.
 
 ```julia
-julia> fwd = construct_primers(alignment); first(fwd)
-Forward degenerate primer with 2 deg. positions
-                                                           \50:66>
-|=====================================================================================86|
-
-  Sequence: CTGGCYGCCAARCTCAA
-  Length: 17
-  Positions: 50:66
-  Unique variants: 4
-  Melting temperature: 56.0°C (55.7⋅56.9°C)
-  Min ΔG: 1.09 kcal/mol
-  GC content: 58.8%
-  Description: "Degenerate consensus for 5 seq MSA"
-
-julia> rev = construct_primers(alignment; is_forward=false); first(rev)
-Constructing R... 100%|██████████| Time: 0:00:00
-Reverse degenerate primer with 2 deg. positions
-
-|=====================================================================================86|
-                                           <50:66\
-  Sequence: TTGAGYTTGGCRGCCAG
-  Length: 17
-  Positions: 50:66
-  Unique variants: 4
-  Melting temperature: 56.0°C (55.4⋅57.3°C)
-  Min ΔG: 1.14 kcal/mol
-  GC content: 58.8%
-  Description: "Reverse complement of Degenerate consensus for 5 seq MSA"
+julia> primers = construct_primers(alignment)
+Constructing primers…    100%|██████████| Time: 0:00:00
+Primer distribution for 5 seq MSA (L=86): 94 primers
+32  ┤                                                    ▃▅▅▅▆██████▆▃                 
+    │                                                  ▁▆█████████████▇▂▂▂             
+    │                 ▂▂▂▂▂▄▅    ▁▁▁▁▁▁▁              ▅███████████████████▆▁           
+    │              ▂▄▇████████▇█████████▇▃          ▂▇██████████████████████▄          
+    │   ▁▃▅▇██████████████████████████████▇▇▇▇▇▇▇▅▃▅██████████████████████████▅▂▂▂▂    
+0   ┼ ╞════════════════════════════════════════════════════════════════════════════════
+    │           ▔▔▔▔▔▔█████████████████████▀▀▀▀▀▀▔▔▔████████████████████████▀▀▔▔       
+    │                 ▔▔▔▔▔▀▀▀▀▀█████████▀▔         ▔████████████████████▀▔▔           
+    │                           ▔▔▔▔▔▔▔▔▔            ▔█████████████████▀▔              
+    │                                                 ▔▔▔▀███████████▀▔                
+32  ┤                                                     ▔▔▔▔▔▔▔▔▔▔▔                  
+      1                                                                              86
 ```
 
 ### 3. Pair Primers
-`best_pairs` matches primers based on amplicon length and $T_m$ compatibility.
+`best_pairs` matches primers based on chosen amplicon length and $T_m$ compatibility and can sort the pairs (`:tm`, `:tm_diff`, `:startpos`, `:length`).
 
 ```julia
-julia> bp = best_pairs(fwd, rev; amplicon_len=50:51); first(bp)
-PCR primer pair for 5 seq. MSA, amplicon: 18:68 (51bp)
-                  >______________________51bp______________________<                     
-|=====================================================================================86|
-Forward: AGACYGACCGHGAAYTMGACCT at 18:39
-Reverse: AATTGAGYTTGGCRGCCA at 51:68
-Tm: 55.8±0.1 °C
+julia> primer_pairs = best_pairs(primers; amplicon_len=40:50, sortby=:startpos)
+97 PCR primer pairs for 5 seq. MSA:
+     |==============================================================86|   Tm °C
+[ 1]    >-------------46bp--------------<                              56.2±1.9
+[ 2]    >--------------48bp---------------<                            57.4±0.7
+[ 3]     >-------------45bp-------------<                              55.8±1.4
+[ 4]     >--------------47bp--------------<                            57.0±0.3
+[ 5]     >--------------47bp--------------<                            58.6±1.8
+[ 6]      >------------44bp-------------<                              55.2±0.9
+                              ... 85 more ...                             ...
+[92]                       >--------------47bp--------------<          56.4±0.6
+[93]                       >--------------48bp---------------<         55.6±1.4
+[94]                       >--------------48bp---------------<         57.4±0.4
+[95]                       >--------------49bp---------------<         55.9±1.1
+[96]                       >--------------49bp---------------<         57.6±0.6
+[97]                       >---------------50bp---------------<        56.3±0.7
 ```
 
 ### 4. Export!
 
+Before exporting you'd better name the primer pairs, you've just constructed:
 ```julia
-julia> export_evrogen(stdout, bp[1:2])
-Degenerate consensus for 5 seq MSA_F_18; AGACYGACCGHGAAYTMGACCT; 0.04
-Reverse complement of Degenerate consensus for 5 seq MSA_R_51; AATTGAGYTTGGCRGCCA; 0.04
-Degenerate consensus for 5 seq MSA_F_28; HGAAYTMGACCTSGCYGAAGC; 0.04
-Reverse complement of Degenerate consensus for 5 seq MSA_R_57; TGAGCTTVGAATTGAGYTTGG; 0.04
+julia> a1 = reannotated(primer_pairs[6], "AMPL_1")
+PCR primer pair for 5 seq. MSA, amplicon: 6:49 (44bp)
+      >________________44bp_________________<                                     
+|==============================================================================86|
+Forward: GYAAYGAGCGKCAGACYGAC at 6:25 (AMPL_1)
+Reverse: SGCTTCRGCSAGGTCKARTTC at 29:49 (AMPL_1)
+Tm: 55.2±0.9 °C
 
-julia> export_evrogen("primers.txt", bp[1:2])
+julia> a2 = reannotated(primer_pairs[92], "AMPL_2")
+PCR primer pair for 5 seq. MSA, amplicon: 30:76 (47bp)
+                           >__________________47bp___________________<            
+|==============================================================================86|
+Forward: AAYTMGACCTSGCYGAAGCSCTG at 30:52 (AMPL_2)
+Reverse: GAGCTTVGAATTGAGYTTGGC at 56:76 (AMPL_2)
+Tm: 56.4±0.6 °C
+```
+
+Now you are free to export your sequences!
+
+```julia
+julia> export_evrogen(stdout, [a1, a2], scale=0.02)
+AMPL_1_F_6; GYAAYGAGCGKCAGACYGAC; 0.02
+AMPL_1_R_49; SGCTTCRGCSAGGTCKARTTC; 0.02
+AMPL_2_F_30; AAYTMGACCTSGCYGAAGCSCTG; 0.02
+AMPL_2_R_76; GAGCTTVGAATTGAGYTTGGC; 0.02
+
+julia> export_evrogen("primers.txt", [a1, a2], scale=0.02)
 "primers.txt"
 ```
 
