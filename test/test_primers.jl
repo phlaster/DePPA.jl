@@ -103,39 +103,36 @@ using SeqFold
         r5 = Primer{DegenOligo}(msa1, 5:8, false, Oligo("ACGT"), 3, tm2, -5.0, 0.5, 0.0)
 
         # Valid pair
-        pairs = best_pairs([f1], [r1])
+        pairs = best_pairs([f1, r1])
         @test length(pairs) == 1
         @test pairs[1].first === f1
         @test pairs[1].second === r1
 
         # Overlapping primers
-        @test isempty(best_pairs([f1], [r2]))
+        @test isempty(best_pairs([f1, r2]))
 
         # Tm difference too large (default max_tm_diff=4.0)
-        @test isempty(best_pairs([f1], [r3]))
+        @test isempty(best_pairs([f1, r3]))
 
         # Tm difference acceptable
-        @test length(best_pairs([f1], [r3]; max_tm_diff = 6.0)) == 1
+        @test length(best_pairs([f1, r3]; max_tm_diff = 6.0)) == 1
 
         # Amplicon length filter (f1=1:4, r1=5:8 -> amplicon = 8 - 1 + 1 = 8)
-        @test isempty(best_pairs([f1], [r1]; amplicon_len = 1:7))
-        @test length(best_pairs([f1], [r1]; amplicon_len = 8:10)) == 1
+        @test isempty(best_pairs([f1, r1]; amplicon_len = 1:7))
+        @test length(best_pairs([f1, r1]; amplicon_len = 8:10)) == 1
 
         # Invalid MSA
-        @test_throws ArgumentError best_pairs([f1], [r4])
+        @test_throws ArgumentError best_pairs([f1, r4])
 
-        # Invalid directions
-        @test_throws ArgumentError best_pairs([r1], [r1]) # reverse as forward
-        @test_throws ArgumentError best_pairs([f1], [f1]) # forward as reverse
+        # No forwards / no reverses -> empty result
+        @test isempty(best_pairs([r1]))   # only reverses
+        @test isempty(best_pairs([f1]))   # only forwards
 
-        # Empty lists
-        e1 = empty([r1])
-        e2 = empty([f1])
-        @test isempty(best_pairs(e1, [r1]))
-        @test isempty(best_pairs([f1], e2))
+        # Empty list
+        @test isempty(best_pairs(Primer{DegenOligo}[]))
 
         # Sort by Tm diff
-        pairs_sorted = best_pairs([f1], [r1, r5])
+        pairs_sorted = best_pairs([f1, r1, r5]; sortby = :tm_diff)
         @test length(pairs_sorted) == 2
         @test pairs_sorted[1].second === r1 # diff 0.0
         @test pairs_sorted[2].second === r5 # diff 1.0

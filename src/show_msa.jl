@@ -123,7 +123,7 @@ function Base.show(io::IO, msa::AbstractMSA)
     displayed_cols_range = 1:min(seq_length, max_seq_chars)
 
     abs_cols = if msa isa MSAView
-        msa.cols.start .+ (displayed_cols_range .- 1)
+        first(msa.cols) .+ (displayed_cols_range .- 1)
     else
         displayed_cols_range
     end

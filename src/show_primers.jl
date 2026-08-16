@@ -57,7 +57,7 @@ function Base.show(io::IO, primer::AbstractPrimer)
         "Primer(\"",
         seq_display,
         "\", len=$(length(primer.consensus)), ",
-        "pos=$(primer.pos.start):$(primer.pos.stop), $dir_str",
+        "pos=$(first(primer.pos)):$(last(primer.pos)), $dir_str",
     )
 
     print(
@@ -136,10 +136,10 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer,<:Abstr
 
         N = nseqs(msa)
         L = length(msa)
-        amp_start = fwd.pos.start
-        amp_end = rev.pos.stop
+        amp_start = first(fwd.pos)
+        amp_end = last(rev.pos)
         amp_len = amp_end - amp_start + 1
-        overlap = fwd.pos.stop >= rev.pos.start ? "!!! OVERLAPPING !!! " : ""
+        overlap = last(fwd.pos) >= first(rev.pos) ? "!!! OVERLAPPING !!! " : ""
         header = "$(overlap)PCR primer pair for $N seq. MSA, amplicon: $amp_start:$amp_end ($(amp_len)bp)"
         println(io, header)
 
@@ -164,7 +164,7 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer,<:Abstr
                 arrow_line[i] = '_'
             end
         end
-        label = fwd.pos.stop >= rev.pos.start ? "" : "$(amp_len)bp"
+        label = last(fwd.pos) >= first(rev.pos) ? "" : "$(amp_len)bp"
         label_len = length(label)
         inner_len = col_amp_end - col_amp_start - 1
         if inner_len >= label_len + 2
@@ -192,8 +192,8 @@ function Base.show(io::IO, ::MIME"text/plain", pp::Pair{<:AbstractPrimer,<:Abstr
                 "" :
                 " (" * (length(r_desc) > 12 ? first(r_desc, 12) * "…" : r_desc) * ")"
 
-        f_tail = " at $(fwd.pos.start):$(fwd.pos.stop)" * f_str
-        r_tail = " at $(rev.pos.start):$(rev.pos.stop)" * r_str
+        f_tail = " at $(first(fwd.pos)):$(last(fwd.pos))" * f_str
+        r_tail = " at $(first(rev.pos)):$(last(rev.pos))" * r_str
         f_seq = _primer_seq_str(fwd, max(5, term_width - length("Forward: ") - length(f_tail)))
         r_seq = _primer_seq_str(rev, max(5, term_width - length("Reverse: ") - length(r_tail)))
         println(io, "Forward: ", f_seq, f_tail)
@@ -235,9 +235,9 @@ function Base.show(io::IO, ::MIME"text/plain", primers::AbstractVector{<:Abstrac
 
     for p in primers
         if p.is_forward
-            fwd_counts[p.pos.start:p.pos.stop] .+= 1
+            fwd_counts[first(p.pos):last(p.pos)] .+= 1
         else
-            rev_counts[p.pos.start:p.pos.stop] .+= 1
+            rev_counts[first(p.pos):last(p.pos)] .+= 1
         end
     end
 
@@ -409,8 +409,8 @@ function Base.show(io::IO, ::MIME"text/plain", pairs::AbstractVector{<:Pair{<:Ab
 
     function pair_line(i)
         fwd, rev = pairs[i]
-        amp_start = fwd.pos.start
-        amp_end = rev.pos.stop
+        amp_start = first(fwd.pos)
+        amp_end = last(rev.pos)
         amp_len = amp_end - amp_start + 1
 
         chars = fill(' ', map_w)

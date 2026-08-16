@@ -251,8 +251,8 @@ Base.getindex(oligo::AbstractOligo, i::Int) = getindex(String(oligo), i)
 function Base.getindex(ov::OligoView, r::UnitRange{Int})
     @boundscheck checkbounds(ov, r)
     ov_range_start::Int = oligo_range(ov).start
-    actual_start = ov_range_start + r.start - 1
-    actual_stop = ov_range_start + r.stop - 1
+    actual_start = ov_range_start + first(r) - 1
+    actual_stop = ov_range_start + last(r) - 1
     actual_range = actual_start:actual_stop
     return OligoView(parent(ov), actual_range)
 end

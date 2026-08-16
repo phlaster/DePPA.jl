@@ -87,7 +87,7 @@ struct MSA <: AbstractMSA
         base_count = _bootstrap_base_counts(
             seqs,
             bootstrap;
-            progress_label = rpad("Bootstrap, $bootstrap it.", 20),
+            progress_label = rpad("Bootstrap, $bootstrap it.", 25),
             barlen = 10,
         )
         gapped_seqs = GappedOligo.(seqs)
@@ -234,10 +234,10 @@ function Base.getindex(msa::AbstractMSA, rows::UnitRange{Int}, cols::UnitRange{I
     root_msa = root(msa)
     abs_rows = isa(msa, MSA) ?
         rows :
-        (msa.rows.start + rows.start - 1):(msa.rows.start + rows.stop - 1)
+        (first(msa.rows) + first(rows) - 1):(first(msa.rows) + last(rows) - 1)
     abs_cols = isa(msa, MSA) ?
         cols :
-        (msa.cols.start + cols.start - 1):(msa.cols.start + cols.stop - 1)
+        (first(msa.cols) + first(cols) - 1):(first(msa.cols) + last(cols) - 1)
     return MSAView(root_msa, abs_rows, abs_cols)
 end
 Base.getindex(msa::AbstractMSA, row::Int, col::Int) = getsequence(msa, row, col)
@@ -250,12 +250,12 @@ Base.getindex(msa::AbstractMSA, rows::UnitRange{Int}, ::Colon) = msa[rows, 1:len
 Base.getindex(msa::AbstractMSA, ::Colon, ::Colon) = msa[1:nseqs(msa), 1:length(msa)]
 
 function Base.checkbounds(msa::AbstractMSA, rows::Colon, cols::UnitRange{<:Integer})
-    if !(1 <= cols.start <= cols.stop <= length(msa))
+    if !(1 <= first(cols) <= last(cols) <= length(msa))
         throw(BoundsError(msa, (:, cols)))
     end
 end
 function Base.checkbounds(msa::AbstractMSA, rows::UnitRange{<:Integer}, cols::Colon)
-    if !(1 <= rows.start <= rows.stop <= nseqs(msa))
+    if !(1 <= first(rows) <= last(rows) <= nseqs(msa))
         throw(BoundsError(msa, (rows, :)))
     end
 end
@@ -264,10 +264,10 @@ function Base.checkbounds(
     rows::UnitRange{<:Integer},
     cols::UnitRange{<:Integer},
 )
-    if !(1 <= rows.start <= rows.stop <= nseqs(msa))
+    if !(1 <= first(rows) <= last(rows) <= nseqs(msa))
         throw(BoundsError(msa, (rows, cols)))
     end
-    if !(1 <= cols.start <= cols.stop <= length(msa))
+    if !(1 <= first(cols) <= last(cols) <= length(msa))
         throw(BoundsError(msa, (rows, cols)))
     end
 end
@@ -340,7 +340,7 @@ Get a sequence or an individual position from an MSA.
 getsequence(msa::MSA, row::Int) = msa.seqs[row]
 
 function getsequence(v::MSAView, row::Int)
-    abs_row = v.rows.start + row - 1
+    abs_row = first(v.rows) + row - 1
     parent_seq = getsequence(root(v), abs_row)
     return parent_seq[v.cols]
 end
@@ -375,7 +375,7 @@ function get_base_count(msav::MSAView, pos::Int)
             "get_base_count not supported for views that slice rows (height), as it requires recomputation",
         ))
     end
-    abs_pos = msav.cols.start + pos - 1
+    abs_pos = first(msav.cols) + pos - 1
     return @view root(msav).base_count[:, abs_pos]
 end
 function get_base_count(msav::MSAView, interval::UnitRange{Int})
@@ -384,7 +384,7 @@ function get_base_count(msav::MSAView, interval::UnitRange{Int})
             "get_base_count not supported for views that slice rows (height), as it requires recomputation",
         ))
     end
-    abs_start = msav.cols.start + interval.start - 1
+    abs_start = first(msav.cols) + first(interval) - 1
     abs_interval = abs_start:(abs_start + length(interval) - 1)
     return @view root(msav).base_count[:, abs_interval]
 end

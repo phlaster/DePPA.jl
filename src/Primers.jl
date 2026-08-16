@@ -345,7 +345,7 @@ function _has_nonspecific_match(
             # Skip if the window overlaps with the target interval
             if !isnothing(skip_interval)
                 window_end = startpos + plen - 1
-                if startpos <= skip_interval.stop && window_end >= skip_interval.start
+                if startpos <= last(skip_interval) && window_end >= first(skip_interval)
                     continue
                 end
             end
@@ -424,7 +424,8 @@ function miniblast(
     query::AbstractString,
     threshold::Real=0.75,
 )::Vector{MiniBlastHit}
-    function _search_strand!(hits, seq, strand)
+    function _search_strand!(hits, seq, L, plen, threshold, strand)
+        abs_match_threshold = plen * threshold
         for startpos in 1:(L-plen+1)
             match_score = 0.0
             valid = true
@@ -457,16 +458,14 @@ function miniblast(
     end
 
     q_oligo = DegenOligo(query)
-
     plen = length(q_oligo)
     L = width(target_msa)
     (iszero(plen) || plen > L) && return MiniBlastHit[]
 
-    abs_match_threshold = plen * threshold
     hits = MiniBlastHit[]
 
-    _search_strand!(hits, q_oligo, :forward)
-    _search_strand!(hits, _ext_revcomp(q_oligo), :reverse)
+    _search_strand!(hits, q_oligo, L, plen, threshold, :forward)
+    _search_strand!(hits, _ext_revcomp(q_oligo), L, plen, threshold, :reverse)
 
     sort!(hits, by=h -> h.identity, rev=true)
     return hits
@@ -480,6 +479,12 @@ function miniblast(
     return miniblast(target_msa, query.consensus, threshold)
 end
 
+
+const NestedPairType = Union{
+    Nothing,
+    Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Integer},
+}
+const NegativeMSAType = AbstractVector{<:Tuple{<:AbstractMSA,<:Real}}
 
 """
     construct_primers(msa::AbstractMSA; kwargs...) -> Vector{Primer{DegenOligo}}
@@ -518,26 +523,26 @@ See also [`best_pairs`](@ref), [`Primer`](@ref), [`consensus_degen`](@ref).
 """
 function construct_primers(
     msa::AbstractMSA;
-    length_range::UnitRange{<:Integer}=17:23,
-    tail_length::Integer=3,
-    tail_degen_pos::Integer=0,
-    head_degen_pos::Integer=5,
-    slack::Real=0.05,
-    gc_range::UnitRange{<:Integer}=40:60,
-    tm_range::UnitRange{<:Integer}=55:60,
-    min_delta_g::Real=-5.0,
-    min_msadepth::Real=0.75,
-    max_oligo_variants::Integer=100,
-    max_samples::Integer=5000,
-    tm_conf_int::Real=0.2,
-    tm_conds=:pcr,
-    dg_temp::Real=mean(tm_range),
-    offtarget_reject_threshold::Real=0.75,
-    adapter_pair=GLOBAL_ADAPTERS[],
-    max_dg_drop::Real=1.0,
-    negative_msa::Vector{Tuple{<:AbstractMSA,<:Real}}=Tuple{MSA,Float64}[],
-    nested_pair::Union{Nothing,Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Integer}}=nothing,
-)::Vector{Primer{DegenOligo}}
+    length_range::AbstractRange{<:Integer} = 17:23,
+    tail_length::Integer = 3,
+    head_degen_pos::Integer = 5,
+    tail_degen_pos::Integer = 0,
+    slack::Real = 0.05,
+    gc_range::AbstractRange{<:Real} = 40:60,
+    tm_range::AbstractRange{<:Real} = 55:60,
+    min_delta_g::Real = -5.0,
+    min_msadepth::Real = 0.75,
+    max_oligo_variants::Integer = 100,
+    max_samples::Integer = 5000,
+    tm_conf_int::Real = 0.2,
+    tm_conds = :pcr,
+    dg_temp::Real = mean(tm_range),
+    offtarget_reject_threshold::Real = 0.75,
+    adapter_pair = GLOBAL_ADAPTERS[],
+    max_dg_drop::Real = 1.0,
+    negative_msa::NegativeMSAType = Tuple{MSA,Float64}[],
+    nested_pair::NestedPairType = nothing,
+)
 
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
     0 ≤ min_msadepth ≤ 1 || throw(ArgumentError("min_msadepth must be in [0,1]"))
@@ -545,10 +550,10 @@ function construct_primers(
     2 ≤ minimum(length_range) ||
         throw(ArgumentError("lower bound of length_range must be ≥ 2nt"))
     0 ≤ tail_length ≤ minimum(length_range) ||
-        throw(ArgumentError("tail_length must be in [0, length_range.start]"))
-    0 ≤ gc_range.start ≤ gc_range.stop ≤ 100 ||
+        throw(ArgumentError("tail_length must be in [0, first(length_range)]"))
+    0 ≤ first(gc_range) ≤ last(gc_range) ≤ 100 ||
         throw(ArgumentError("gc_range must be in [0, 100]"))
-    0 ≤ tm_range.start ≤ tm_range.stop ≤ 100 ||
+    0 ≤ first(tm_range) ≤ last(tm_range) ≤ 100 ||
         throw(ArgumentError("tm_range must be in [0, 100]"))
     0 ≤ offtarget_reject_threshold ≤ 1 ||
         throw(ArgumentError("offtarget_reject_threshold must be in [0,1]"))
@@ -574,8 +579,8 @@ function construct_primers(
         end
     else
         flanking_pair, offset = nested_pair
-        amp_start = flanking_pair.first.pos.start
-        amp_stop = flanking_pair.second.pos.stop
+        amp_start = first(flanking_pair.first.pos)
+        amp_stop = last(flanking_pair.second.pos)
 
         1 <= amp_start <= amp_stop <= L ||
             throw(ArgumentError(
@@ -653,7 +658,7 @@ function construct_primers(
     end
 
     # 2. Define thread-safe evaluation logic
-    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)::Union{Nothing,Primer{DegenOligo}}
+    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)
         len = length(interval)
         tail_len = min(tail_length, len)
         head_len = len - tail_len
@@ -663,11 +668,11 @@ function construct_primers(
         any(<(min_msadepth), depths) && return nothing
 
         if is_forward
-            head_interval = interval.start:(interval.start+head_len-1)
-            tail_interval = (interval.start+head_len):interval.stop
+            head_interval = first(interval):(first(interval)+head_len-1)
+            tail_interval = (first(interval)+head_len):last(interval)
         else
-            head_interval = (interval.start+tail_len):interval.stop
-            tail_interval = interval.start:(interval.start+tail_len-1)
+            head_interval = (first(interval)+tail_len):last(interval)
+            tail_interval = first(interval):(first(interval)+tail_len-1)
         end
 
         if head_len > 0
@@ -717,7 +722,7 @@ function construct_primers(
         cons = n_unique_oligos(cons) == 1 ? Oligo(cons) : cons
 
         gc = _ext_gc_content(cons)
-        !(gc_range.start / 100 <= gc <= gc_range.stop / 100) && return nothing
+        !(first(gc_range) / 100 <= gc <= last(gc_range) / 100) && return nothing
 
         dg_val = _ext_dg(cons; max_samples=max_samples, temp=dg_temp)
         dg_val < min_delta_g && return nothing
@@ -728,7 +733,7 @@ function construct_primers(
             conf_int=tm_conf_int,
             conditions=tm_conds,
         )
-        (tm_range.stop < first(Tm.conf) || last(Tm.conf) < tm_range.start) && return nothing
+        (last(tm_range) < first(Tm.conf) || last(Tm.conf) < first(tm_range)) && return nothing
 
         final_dg = dg_val
         adapter_to_add = nothing
@@ -761,7 +766,7 @@ function construct_primers(
     # 3. Multithreaded evaluation
     prog = Progress(
         length(candidates);
-        desc=rpad("Constructing primers…", 20),
+        desc=rpad("Constructing primers…", 25),
         color=:white,
         barlen=10,
     )
@@ -807,15 +812,12 @@ Find the best matching pairs of forward and reverse primers from a single vector
 See also [`construct_primers`](@ref), [`Primer`](@ref).
 """
 function best_pairs(
-    primers::Vector{<:AbstractPrimer};
+    primers::AbstractVector{<:AbstractPrimer};
     amplicon_len::UnitRange{Int}=0:9999,
     max_tm_diff::Real=4.0,
-    nested_pair::Union{
-        Nothing,
-        Tuple{Pair{<:AbstractPrimer,<:AbstractPrimer},Int},
-    }=nothing,
+    nested_pair::NestedPairType=nothing,
     sortby::Symbol=:default
-)::Vector{Pair{Primer{DegenOligo},Primer{DegenOligo}}}
+)
     allowed_sort_symbols = (:default, :tm_diff, :tm, :startpos, :length)
     sortby in allowed_sort_symbols || throw(ArgumentError("Allowed `sortby` values: $allowed_sort_symbols"))
 
@@ -845,8 +847,8 @@ function best_pairs(
             throw(ArgumentError("Flanking pair must refer to the same MSA as the primers"))
         end
 
-        nested_amp_start = flanking_pair.first.pos.start
-        nested_amp_stop = flanking_pair.second.pos.stop
+        nested_amp_start = first(flanking_pair.first.pos)
+        nested_amp_stop = last(flanking_pair.second.pos)
         nested_offset = offset
 
         1 <= nested_amp_start <= nested_amp_stop <= L ||
@@ -891,7 +893,7 @@ function best_pairs(
     total_comparisons = length(forwards) * length(reverses)
     @showprogress desc=rpad("Paring…", 20) enabled=(total_comparisons > 10000) barlen=10 for f in forwards
         for r in reverses
-            if f.pos.stop >= r.pos.start
+            if last(f.pos) >= first(r.pos)
                 # overlapping primers
                 continue
             end
@@ -900,20 +902,20 @@ function best_pairs(
                 continue
             end
 
-            amplicon = r.pos.stop - f.pos.start + 1
+            amplicon = last(r.pos) - first(f.pos) + 1
             if !(amplicon in amplicon_len)
                 continue
             end
 
             if use_nested
                 if nested_offset < 0
-                    if f.pos.start < nested_amp_start - nested_offset ||
-                       r.pos.stop > nested_amp_stop + nested_offset
+                    if first(f.pos) < nested_amp_start - nested_offset ||
+                       last(r.pos) > nested_amp_stop + nested_offset
                         continue
                     end
                 elseif nested_offset > 0
-                    if f.pos.stop >= nested_amp_start - nested_offset ||
-                       r.pos.start <= nested_amp_stop + nested_offset
+                    if last(f.pos) >= nested_amp_start - nested_offset ||
+                       first(r.pos) <= nested_amp_stop + nested_offset
                         continue
                     end
                 end
@@ -930,9 +932,9 @@ function best_pairs(
     elseif sortby == :tm
         sort!(pairs; by=p -> (p.first.tm.mean + p.second.tm.mean)/2)
     elseif sortby == :startpos
-        sort!(pairs; by=p -> p.first.pos.start)
+        sort!(pairs; by=p -> first(p.first.pos))
     elseif sortby == :length
-        sort!(pairs; by=p -> p.second.pos.stop - p.first.pos.start + 1)
+        sort!(pairs; by=p -> last(p.second.pos) - first(p.first.pos) + 1)
     end
     return pairs
 end
