@@ -1,3 +1,17 @@
+module Utils
+export NON_DEGEN_BASES,
+    DEGEN_BASES,
+    ALL_BASES,
+    BASES_W_GAPS,
+    IUPAC_B2V,
+    IUPAC_V2B,
+    IUPAC_COUNTS,
+    IUPAC_GC_CONTENT,
+    DNA_COMP_TABLE_DEG,
+    IUPAC_PROBS,
+    MAX_GC_OPTIONS,
+    MIN_GC_OPTIONS
+
 """
     NON_DEGEN_BASES
 
@@ -43,21 +57,21 @@ const IUPAC_B2V = Dict(
 
 Map a tuple of non-degenerate bases to its corresponding IUPAC ambiguity character (the inverse of [`IUPAC_B2V`](@ref)).
 """
-const IUPAC_V2B = Dict(v=>k for (k,v) in IUPAC_B2V)
+const IUPAC_V2B = Dict(v => k for (k, v) in IUPAC_B2V)
 
 """
     IUPAC_COUNTS
 
 Map each IUPAC nucleotide character to the number of unique non-degenerate bases it represents (e.g., `'R' => 2`, `'N' => 4`).
 """
-const IUPAC_COUNTS = Dict(k=>length(v) for (k,v) in IUPAC_B2V)
+const IUPAC_COUNTS = Dict(k => length(v) for (k, v) in IUPAC_B2V)
 
 """
     IUPAC_GC_CONTENT
 
 Map each IUPAC nucleotide character to its expected GC content as a fraction (e.g., `'S' => 1.0`, `'W' => 0.0`).
 """
-const IUPAC_GC_CONTENT = Dict(k=>count(in("CG"), v)/length(v) for (k,v) in IUPAC_B2V)
+const IUPAC_GC_CONTENT = Dict(k => count(in("CG"), v) / length(v) for (k, v) in IUPAC_B2V)
 
 """
     DNA_COMP_TABLE_DEG
@@ -135,3 +149,5 @@ const MIN_GC_OPTIONS = let
     end
     d
 end
+
+end # utils

@@ -10,7 +10,7 @@ The top-level module orchestrates the package's subcomponents and provides a uni
 DePPA
 ```
 
-All usefull functions are typically obtained by loading submodules. Some functions are useless without loading 3rd-party packages like `MAFFT_jll`.
+All useful functions are typically obtained by loading submodules. Some functions are useless without loading 3rd-party packages like `MAFFT_jll`.
 
 ## Oligos
 
@@ -34,7 +34,7 @@ Order = [:type, :function]
 
 ## Primers
 
-The `Primers` module automates the design of degenerate PCR primers directly from an MSA. The [`construct_primers`](@ref) function performs multithreaded scanning of the alignment, evaluating candidates against strict thermodynamic and conservation filters. Unlike traditional tools that evaluate a single consensus sequence, this module treats degenerate primers as statistical ensembles, calculating distributions for melting temperature ($T_m$), free energy ($\Delta G$), and GC content across all non-degenerate variants. Finally, [`best_pairs`](@ref) matches forward and reverse primers based on amplicon length and thermodynamic compatibility.
+The `Primers` module automates the design of degenerate PCR primers directly from an MSA. The [`construct_primers`](@ref) function performs multithreaded scanning of the alignment, evaluating candidates against strict thermodynamic, conservation, and specificity filters. Unlike traditional tools that evaluate a single consensus sequence, this module treats degenerate primers as statistical ensembles, calculating distributions for melting temperature ($T_m$), free energy ($\Delta G$), and GC content across all non-degenerate variants. Finally, [`best_pairs`](@ref) matches forward and reverse primers based on amplicon length and thermodynamic compatibility.
 
 ```@autodocs
 Modules = [DePPA.Primers]
