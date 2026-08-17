@@ -6,8 +6,9 @@
     <a href="https://phlaster.github.io/DePPA.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Stable Docs"></a>
     <a href="https://phlaster.github.io/DePPA.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev Docs"></a>
     <a href="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml?query=branch%3Amaster"><img src="https://github.com/phlaster/DePPA.jl/actions/workflows/CI.yml/badge.svg?branch=master" alt="Build Status"></a>
-    <a href="https://github.com/JuliaTesting/Aqua.jl"><img src="https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg" alt="Aqua QA"></a>
     <a href="https://codecov.io/gh/phlaster/DePPA.jl"><img src="https://codecov.io/gh/phlaster/DePPA.jl/graph/badge.svg?token=DCH8TMMXOA" alt="Codecov"></a>
+    <a href="https://github.com/aviatesk/JET.jl"><img src="https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a" alt="JET.jl"></a>
+    <a href="https://github.com/JuliaTesting/Aqua.jl"><img src="https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg" alt="Aqua QA"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
   </p>
 </div>
