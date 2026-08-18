@@ -8,7 +8,7 @@ using FastaIO
 using Random
 
 export AbstractMSA, MSA, MSAView
-export nseqs, width, height, getsequence, get_base_count
+export nseqs, width, height, getsequence, get_base_count, get_base_var
 export msadepth, msadet, root, bval
 export consensus_major, consensus_degen, dry_msa, nucleotide_diversity
 export setMSAShowStyle!, setMSAconsensusShowType!
@@ -23,23 +23,30 @@ function _bootstrap_base_counts(
     L = length(first(seqs))
     all(length(s) == L for s in seqs) ||
         throw(ArgumentError("All sequences must have the same length"))
-    base_count = zeros(4, L)
-    if bootstrap > 0
+
+    mean_counts = zeros(4, L)
+    var_counts = zeros(4, L)
+
+    if bootstrap > 1
         @showprogress desc = progress_label barlen = barlen for b in 1:bootstrap
             boot_rows = rand(1:n, n)
-            boot_seqs = seqs[boot_rows]
 
             Threads.@threads for j in 1:L
                 pos_counts = zeros(4)
-                for s in boot_seqs
-                    c = uppercase(s[j])
+                for idx in boot_rows
+                    c = uppercase(seqs[idx][j])
                     probs = get(IUPAC_PROBS, c, (0.0, 0.0, 0.0, 0.0))
                     pos_counts .+= probs
                 end
                 current_freq = pos_counts / n
-                base_count[:, j] += (current_freq - base_count[:, j]) / b
+
+                delta = current_freq .- mean_counts[:, j]
+                mean_counts[:, j] .+= delta ./ b
+                delta2 = current_freq .- mean_counts[:, j]
+                var_counts[:, j] .+= delta .* delta2
             end
         end
+        var_counts ./= (bootstrap - 1)
     else
         Threads.@threads for j in 1:L
             counts = zeros(4)
@@ -48,10 +55,10 @@ function _bootstrap_base_counts(
                 probs = get(IUPAC_PROBS, c, (0.0, 0.0, 0.0, 0.0))
                 counts .+= probs
             end
-            base_count[:, j] = counts / n
+            mean_counts[:, j] = counts / n
         end
     end
-    return base_count
+    return mean_counts, var_counts
 end
 
 """
@@ -69,29 +76,23 @@ A concrete Multiple Sequence Alignment type. Stores sequences and precomputed ba
 struct MSA <: AbstractMSA
     seqs::Vector{<:AbstractGapped}
     base_count::Matrix{Float64}
+    base_var::Matrix{Float64}
     bootstrap::Int
 
-    """
-        MSA(seqs::Vector{<:AbstractString}; bootstrap::Int=0, seed=nothing)
-
-    Construct an MSA from a vector of equal-length strings.
-
-    If `bootstrap > 0`, compute base frequencies using bootstrap resampling.
-    """
     function MSA(seqs::Vector{<:AbstractString}; bootstrap::Int = 0, seed = nothing)
         bootstrap >= 0 || throw(ArgumentError("bootstrap must be non-negative"))
         isnothing(seed) || Random.seed!(seed)
 
-        isempty(seqs) && return new(GappedOligo[], zeros(4, 0), bootstrap)
+        isempty(seqs) && return new(GappedOligo[], zeros(4, 0), zeros(4, 0), bootstrap)
 
-        base_count = _bootstrap_base_counts(
+        base_count, base_var = _bootstrap_base_counts(
             seqs,
             bootstrap;
             progress_label = rpad("Bootstrap, $bootstrap it.", 25),
             barlen = 10,
         )
         gapped_seqs = GappedOligo.(seqs)
-        return new(gapped_seqs, base_count, bootstrap)
+        return new(gapped_seqs, base_count, base_var, bootstrap)
     end
 end
 
@@ -390,6 +391,33 @@ function get_base_count(msav::MSAView, interval::UnitRange{Int})
 end
 get_base_count(msav::MSAView) = get_base_count(msav, 1:length(msav))
 
+get_base_var(msa::MSA, pos::Int) = @view msa.base_var[:, pos]
+get_base_var(msa::MSA, interval::UnitRange{Int}) = @view msa.base_var[:, interval]
+get_base_var(msa::MSA) = msa.base_var
+
+function get_base_var(msav::MSAView, pos::Int)
+    if !_is_full_height(msav)
+        throw(ErrorException(
+            "get_base_var not supported for views that slice rows (height), as it requires recomputation",
+        ))
+    end
+    abs_pos = first(msav.cols) + pos - 1
+    return @view root(msav).base_var[:, abs_pos]
+end
+
+function get_base_var(msav::MSAView, interval::UnitRange{Int})
+    if !_is_full_height(msav)
+        throw(ErrorException(
+            "get_base_var not supported for views that slice rows (height), as it requires recomputation",
+        ))
+    end
+    abs_start = first(msav.cols) + first(interval) - 1
+    abs_interval = abs_start:(abs_start + length(interval) - 1)
+    return @view root(msav).base_var[:, abs_interval]
+end
+
+get_base_var(msav::MSAView) = get_base_var(msav, 1:length(msav))
+
 """
     msadepth(msa::AbstractMSA, pos::Int)
     msadepth(msa::AbstractMSA, interval::UnitRange{Int})
@@ -500,15 +528,20 @@ See also [`consensus_major`](@ref), [`get_base_count`](@ref).
 """
 function consensus_degen(msa::AbstractMSA, pos::Int; slack::Real = 0.0)::Char
     0 ≤ slack < 1 || throw(ArgumentError("slack must be in [0,1)"))
-    p = get_base_count(msa, pos)
-    if sum(p) < 0.5
+    mean_p = get_base_count(msa, pos)
+    if sum(mean_p) < 0.5
         return '-'
     end
-    active = findall(>(slack), p)
+
+    var_p = get_base_var(msa, pos)
+    conf_p = max.(0.0, mean_p .- sqrt.(var_p))
+
+    active = findall(>(slack), conf_p)
     isempty(active) && return '-'
     bs = NON_DEGEN_BASES[active]
     return IUPAC_V2B[bs]
 end
+
 function consensus_degen(
     msa::AbstractMSA,
     interval::UnitRange{Int} = 1:width(msa);
