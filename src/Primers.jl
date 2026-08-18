@@ -497,7 +497,7 @@ Construct a list of candidate primers (both forward and reverse) from an MSA bas
 - `tail_length::Integer=3`: Length of the 3' tail region.
 - `head_degen_pos::Integer=5`: Maximum allowed degenerate positions in the 5' head region.
 - `tail_degen_pos::Integer=0`: Maximum allowed degenerate positions in the 3' tail region.
-- `slack::Real=0.05`: Minimum frequency threshold for including a base in the degenerate consensus.
+- `slack::Real=0.02`: Minimum frequency threshold for including a base in the degenerate consensus.
 - `gc_range::UnitRange{<:Integer}=40:60`: Allowed GC content percentage range.
 - `tm_range::UnitRange{<:Integer}=55:60`: Allowed melting temperature (Tm) range.
 - `min_delta_g::Real=-5.0`: Minimum allowed free energy (ΔG) at `dg_temp`.
@@ -527,7 +527,7 @@ function construct_primers(
     tail_length::Integer = 3,
     head_degen_pos::Integer = 5,
     tail_degen_pos::Integer = 0,
-    slack::Real = 0.05,
+    slack::Real = 0.02,
     gc_range::AbstractRange{<:Real} = 40:60,
     tm_range::AbstractRange{<:Real} = 55:60,
     min_delta_g::Real = -5.0,
@@ -565,6 +565,7 @@ function construct_primers(
 
     L = length(msa)
     base_count = get_base_count(msa)
+    base_var = get_base_var(msa)
 
     # 1. Generate all valid candidate intervals
     candidates = Tuple{UnitRange{Int},Bool}[]
@@ -658,7 +659,7 @@ function construct_primers(
     end
 
     # 2. Define thread-safe evaluation logic
-    function _evaluate(interval::UnitRange{Int}, is_forward::Bool)
+    @views @inbounds function _evaluate(interval::UnitRange{Int}, is_forward::Bool)
         len = length(interval)
         tail_len = min(tail_length, len)
         head_len = len - tail_len
@@ -676,14 +677,40 @@ function construct_primers(
         end
 
         if head_len > 0
-            head_freqs = @view base_count[:, head_interval]
-            head_deg = sum(count(>(slack), col) > 1 for col in eachcol(head_freqs))
+            head_freqs_mean = base_count[:, head_interval]
+            head_freqs_var = base_var[:, head_interval]
+            head_deg = 0
+            for col in axes(head_freqs_mean, 2)
+                deg_count = 0
+                for k in 1:4
+                    conf_val = head_freqs_mean[k, col] - sqrt(head_freqs_var[k, col])
+                    if conf_val > slack
+                        deg_count += 1
+                    end
+                end
+                if deg_count > 1
+                    head_deg += 1
+                end
+            end
             head_deg > head_degen_pos && return nothing
         end
 
         if tail_len > 0
-            tail_freqs = @view base_count[:, tail_interval]
-            tail_deg = sum(count(>(slack), col) > 1 for col in eachcol(tail_freqs))
+            tail_freqs_mean = base_count[:, tail_interval]
+            tail_freqs_var = base_var[:, tail_interval]
+            tail_deg = 0
+            for col in axes(tail_freqs_mean, 2)
+                deg_count = 0
+                for k in 1:4
+                    conf_val = tail_freqs_mean[k, col] - sqrt(tail_freqs_var[k, col])
+                    if conf_val > slack
+                        deg_count += 1
+                    end
+                end
+                if deg_count > 1
+                    tail_deg += 1
+                end
+            end
             tail_deg > tail_degen_pos && return nothing
         end
 
@@ -773,8 +800,7 @@ function construct_primers(
     l = ReentrantLock()
     primers = Primer{DegenOligo}[]
 
-    Threads.@threads for idx in eachindex(candidates)
-        interval, is_forward = candidates[idx]
+    Threads.@threads for (interval, is_forward) in candidates
         p = _evaluate(interval, is_forward)
 
         lock(l)
