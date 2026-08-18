@@ -1,4 +1,4 @@
-PCR primer pair for 66 seq. MSA, amplicon: 549:738 (190bp)
+PCR primer pair for 66 seq. MSA, amplicon: 550:739 (190bp)
                                                      >______190bp______<       
 |==========================================================================768|
 Forward: GGCGANYTVATCGARATCCGC at 549:569 (Degenerate c…)
