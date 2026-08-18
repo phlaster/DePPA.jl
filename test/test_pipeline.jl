@@ -1,4 +1,4 @@
-using DePPA.Alignments, DePPA.Primers, MAFFT_jll, SeqFold
+using DePPA.Alignments, DePPA.Primers, MAFFT_jll, SeqFold, Random
 
 Random.seed!(123)
 
