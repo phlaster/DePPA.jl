@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · DePPA.jl</title><meta name="title" content="Home · DePPA.jl"/><meta property="og:title" content="Home · DePPA.jl"/><meta property="twitter:title" content="Home · DePPA.jl"/><meta name="description" content="Documentation for DePPA.jl."/><meta property="og:description" content="Documentation for DePPA.jl."/><meta property="twitter:description" content="Documentation for DePPA.jl."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="DePPA.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>DePPA.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Features"><span>Features</span></a></li><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Quick-Start"><span>Quick Start</span></a></li></ul></li><li><a class="tocitem" href="api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/phlaster/DePPA.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/phlaster/DePPA.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="DePPA.jl"><a class="docs-heading-anchor" href="#DePPA.jl">DePPA.jl</a><a id="DePPA.jl-1"></a><a class="docs-heading-anchor-permalink" href="#DePPA.jl" title="Permalink"></a></h1><p><strong>D</strong>egenerate <strong>P</strong>rimer <strong>P</strong>air <strong>A</strong>ssembler</p><p><code>DePPA.jl</code> is a high-performance pure Julia package for multiple sequence alignment (MSA) analysis and PCR primer design. The package is specifically engineered to handle degenerate (IUPAC) nucleotide sequences and provides rigorous statistical calculations for the thermodynamic properties of primer pools.</p><h2 id="Features"><a class="docs-heading-anchor" href="#Features">Features</a><a id="Features-1"></a><a class="docs-heading-anchor-permalink" href="#Features" title="Permalink"></a></h2><ul><li><strong>Strict Oligonucleotide Typing:</strong> Distinct, type-stable structures for pure, degenerate, and gapped sequences, with zero-allocation sequence slicing.</li><li><strong>MSA Analysis:</strong> Efficient parsing of FASTA alignments, calculation of position-specific metrics (depth, determinacy), and generation of consensus sequences. Includes a customizable terminal viewer.</li><li><strong>Thermodynamic Primer Design:</strong> Automated MSA scanning and multi-criteria filtering. Primers are evaluated based on the statistical distribution of <span>$T_m$</span> and <span>$\Delta G$</span> across their degenerate variants.</li><li><strong>Specificity Filtering:</strong> Evaluates candidate primers against the input MSA to reject off-target binding sites, using a probabilistic threshold (<code>offtarget_reject_threshold</code>) for both forward and reverse complement matches.</li><li><strong>Lazy Thermodynamic Engine:</strong> Core alignment and sequence manipulation requires no external dependencies. Nearest-neighbor (NN) thermodynamic calculations are seamlessly integrated via a Julia Extension linking to SeqFold.jl, loading the heavy dependencies only when required.</li></ul><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>To use the core alignment and sequence features, install <code>DePPA.jl</code>:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;DePPA&quot;)</code></pre><p>For alignment and thermodynamic calculations, you also need to load the optional extensions:</p><pre><code class="language-julia hljs">Pkg.add(&quot;MAFFT_jll&quot;) # in-place multiple sequence alignment engine
+Pkg.add(&quot;SeqFold&quot;)   # thermodynamic calculations for primer design
+
+using DePPA.Alignments, DePPA.Primers, MAFFT_jll, SeqFold</code></pre><h2 id="Quick-Start"><a class="docs-heading-anchor" href="#Quick-Start">Quick Start</a><a id="Quick-Start-1"></a><a class="docs-heading-anchor-permalink" href="#Quick-Start" title="Permalink"></a></h2><h3 id="Loading-data"><a class="docs-heading-anchor" href="#Loading-data">Loading data</a><a id="Loading-data-1"></a><a class="docs-heading-anchor-permalink" href="#Loading-data" title="Permalink"></a></h3><p>Here we define a small set of unaligned sequences in memory and write them to a temporary FASTA file. But you will use the actual fasta file from the disc.</p><pre><code class="language-julia hljs">julia&gt; data = &quot;&quot;&quot;&gt;1
+               GATCTGTAATGAGCGGCAGACCGACCGCGAATTAGACCTCGC
+               CGAAGCCCTGGCCGCCAAGCTCAATTCGAAGCTCATTCAC
+               &gt;2
+               CATTTGCAACGAGCGTCAGACCGACCGCGAACTCGACCTGGC
+               CGAAGCGCTGGCTGCCAAACTCAATTCTAAGCTCATC
+               &gt;3
+               CATTTGTAACGAGCGTCAGACCGACCGTGAACTCGACCTCGC
+               CGAGCTGCCAAACTCAATTCCAAGCTCATCCACTT
+               &gt;4
+               CTGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGA
+               AGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTTG
+               &gt;5
+               TGTAACGAGCGGCAGACTGACCGAGAATTAGACCTCGCTGAA
+               GCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTTAG&quot;&quot;&quot;;
+
+julia&gt; temp_fasta = tempname(); open(temp_fasta, &quot;w&quot;) do f write(f, data) end;</code></pre><p>Next, we construct an <code>MSA</code> object. Passing <code>mafft=true</code> triggers the MAFFT engine (via <code>MAFFT_jll</code>) to align the sequences in-place. Your terminal output automatically displays a truncated, color-coded view with a consensus track.</p><pre><code class="language-julia hljs">julia&gt; alignment = MSA(temp_fasta; mafft=true)
+MSA with 5 sequences of length 86:
+   CATCTGTAACGAGCGGCAGACCGACCGAGAATTAGACCTCGCCGAAGCGCTGGCCGCCAAGCTCAATTCGAAGCTCATTCACTT--
+1 &gt;G..C.....T.................C....................C.................................----
+2 &gt;C.....C........T...........C...C.C.....G..............T.....A........T........C-------
+3 &gt;C..............T...........T...C.C...........-------..T.....A........C........C.....--
+4 &gt;---C.................T....................T.........................................TG
+5 &gt;----.................T....................T.........................................AG
+   1        ·         ·         ·         ·         ⌢         ·         ·         ·    86</code></pre><h3 id="Main-method"><a class="docs-heading-anchor" href="#Main-method">Main method</a><a id="Main-method-1"></a><a class="docs-heading-anchor-permalink" href="#Main-method" title="Permalink"></a></h3><p>Now we generate candidate primers. The <code>construct_primers</code> function scans the alignment and returns a single vector containing both forward and reverse primers, filtering candidates based on GC content, <span>$T_m$</span>, <span>$\Delta G$</span> distributions, and specificity (off-target binding within the MSA). The custom <code>Base.show</code> method provides a histogram of primer distribution across the alignment.</p><pre><code class="language-julia hljs">julia&gt; primers = construct_primers(alignment)
+Primer distribution for 5 seq MSA (L=86): 94 primers
+32  ┤                                                    ▃▅▅▅▆██████▆▃                 
+    │                                                  ▁▆█████████████▇▂▂▂             
+    │                 ▂▂▂▂▂▄▅    ▁▁▁▁▁▁▁              ▅███████████████████▆▁           
+    │              ▂▄▇████████▇█████████▇▃          ▂▇██████████████████████▄          
+    │   ▁▃▅▇██████████████████████████████▇▇▇▇▇▇▇▅▃▅██████████████████████████▅▂▂▂▂    
+0   ┼ ╞════════════════════════════════════════════════════════════════════════════════
+    │           ▔▔▔▔▔▔█████████████████████▀▀▀▀▀▀▔▔▔████████████████████████▀▀▔▔       
+    │                 ▔▔▔▔▔▀▀▀▀▀█████████▀▔         ▔████████████████████▀▔▔           
+    │                           ▔▔▔▔▔▔▔▔▔            ▔█████████████████▀▔              
+    │                                                 ▔▔▔▀███████████▀▔                
+32  ┤                                                     ▔▔▔▔▔▔▔▔▔▔▔                  
+      1                                                                              86</code></pre><h3 id="Pairing"><a class="docs-heading-anchor" href="#Pairing">Pairing</a><a id="Pairing-1"></a><a class="docs-heading-anchor-permalink" href="#Pairing" title="Permalink"></a></h3><p>We pair the generated primers using <code>best_pairs</code>, which takes a single vector of mixed forward and reverse primers, matches them based on the desired amplicon length and <span>$T_m$</span> compatibility, and can sort the results using the <code>sortby</code> keyword.</p><pre><code class="language-julia hljs">julia&gt; primer_pairs = best_pairs(primers; amplicon_len=40:50, sortby=:startpos)
+97 PCR primer pairs for 5 seq. MSA:
+     |==============================================================86|   Tm °C
+[ 1]    &gt;-------------46bp--------------&lt;                              56.2±1.9
+[ 2]    &gt;--------------48bp---------------&lt;                            57.4±0.7
+[ 3]     &gt;-------------45bp-------------&lt;                              55.8±1.4
+[ 4]     &gt;--------------47bp--------------&lt;                            57.0±0.3
+[ 5]     &gt;--------------47bp--------------&lt;                            58.6±1.8
+[ 6]      &gt;------------44bp-------------&lt;                              55.2±0.9
+                              ... 85 more ...                             ...
+[92]                       &gt;--------------47bp--------------&lt;          56.4±0.6
+[93]                       &gt;--------------48bp---------------&lt;         55.6±1.4
+[94]                       &gt;--------------48bp---------------&lt;         57.4±0.4
+[95]                       &gt;--------------49bp---------------&lt;         55.9±1.1
+[96]                       &gt;--------------49bp---------------&lt;         57.6±0.6
+[97]                       &gt;---------------50bp---------------&lt;        56.3±0.7</code></pre><h3 id="Renaming"><a class="docs-heading-anchor" href="#Renaming">Renaming</a><a id="Renaming-1"></a><a class="docs-heading-anchor-permalink" href="#Renaming" title="Permalink"></a></h3><p>Before exporting, you can rename the primer pairs using <code>reannotated</code>. Let&#39;s select two distinct pairs:</p><pre><code class="language-julia hljs">julia&gt; a1 = reannotated(primer_pairs[6], &quot;AMPL_1&quot;)
+PCR primer pair for 5 seq. MSA, amplicon: 6:49 (44bp)
+      &gt;________________44bp_________________&lt;                                     
+|==============================================================================86|
+Forward: GYAAYGAGCGKCAGACYGAC at 6:25 (AMPL_1)
+Reverse: SGCTTCRGCSAGGTCKARTTC at 29:49 (AMPL_1)
+Tm: 55.2±0.9 °C
+
+julia&gt; a2 = reannotated(primer_pairs[92], &quot;AMPL_2&quot;)
+PCR primer pair for 5 seq. MSA, amplicon: 30:76 (47bp)
+                           &gt;__________________47bp___________________&lt;            
+|==============================================================================86|
+Forward: AAYTMGACCTSGCYGAAGCSCTG at 30:52 (AMPL_2)
+Reverse: GAGCTTVGAATTGAGYTTGGC at 56:76 (AMPL_2)
+Tm: 56.4±0.6 °C</code></pre><h3 id="Designing-Primers-with-Adapters"><a class="docs-heading-anchor" href="#Designing-Primers-with-Adapters">Designing Primers with Adapters</a><a id="Designing-Primers-with-Adapters-1"></a><a class="docs-heading-anchor-permalink" href="#Designing-Primers-with-Adapters" title="Permalink"></a></h3><p>You can automatically append 5&#39; adapters (e.g., for multiplexing or sequencing platforms) to your primers using <code>setAdapters!</code>. Once set, <code>construct_primers</code> will automatically append them, recalculate <span>$\Delta G$</span> at the primer&#39;s mean <span>$T_m$</span>, and discard candidates where the adapter worsens <span>$\Delta G$</span> by more than <code>max_dg_drop</code> (default: 1.0 kcal/mol).</p><pre><code class="language-julia hljs">julia&gt; setAdapters!(&quot;TACGGGC&quot; =&gt; &quot;GAACGAT&quot;); # Set some adapters for the toy example
+
+julia&gt; adp_primers = construct_primers(alignment)
+Primer distribution for 5 seq MSA (L=86): 53 primers
+27  ┤                                                                                  
+    │                                                        ▁▂▂▂▂▂▂▂▂▂▂▂▂▁            
+    │                                                    ▄▇▇▇██████████████▄           
+    │                                                   ▆███████████████████▆▂         
+    │     ▁▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁     ▄███████████████████████▅▂▂▂▂    
+0   ┼ ╞════════════════════════════════════════════════════════════════════════════════
+    │           ▔▔▔▔▔▔▔▔▔▔▔▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▔▔▔▔█████████████████████████▀▀▔       
+    │                                               ▔████████████████████▀▔▔▔          
+    │                                                ▀█████████████████▀▔              
+    │                                                 ▀▀▀██████████████                
+27  ┤                                                    ▔██████████▀▔▔                
+      1                                                                              86
+
+julia&gt; setAdapters!(); # to reset or pass `adapter_pair=nothing` kwarg to `construct_primers`</code></pre><p>Now we pair the generated primers with adapters:</p><pre><code class="language-julia hljs">julia&gt; adp_pairs = best_pairs(adp_primers; amplicon_len=40:50, sortby=:startpos)
+16 PCR primer pairs for 5 seq. MSA:
+     |===================================================================86|   Tm °C
+[ 1]      &gt;--------------44bp--------------&lt;                                55.2±0.9
+[ 2]      &gt;---------------46bp---------------&lt;                              56.4±0.3
+[ 3]       &gt;-------------42bp--------------&lt;                                54.2±0.2
+[ 4]       &gt;--------------44bp---------------&lt;                              55.4±1.4
+[ 5]                     &gt;-------------42bp-------------&lt;                   55.0±1.1
+                                 ... 6 more ...                                ...
+[12]                     &gt;---------------46bp---------------&lt;               55.6±1.7
+[13]                     &gt;---------------47bp---------------&lt;               55.2±1.3
+[14]                     &gt;---------------48bp----------------&lt;              54.8±0.9
+[15]                     &gt;---------------48bp----------------&lt;              55.9±2.0
+[16]                     &gt;----------------49bp----------------&lt;             55.6±1.7
+
+julia&gt; a1a = reannotated(adp_pairs[1], &quot;AMPL_1_ADP&quot;)
+PCR primer pair for 5 seq. MSA, amplicon: 6:49 (44bp)
+      &gt;__________________44bp__________________&lt;                                       
+|===================================================================================86|
+Forward: [TACGGGC]GYAAYGAGCGKCAGACYGAC at 6:25 (AMPL_1_ADP)
+Reverse: [GAACGAT]SGCTTCRGCSAGGTCKARTTC at 29:49 (AMPL_1_ADP)
+Tm: 55.2±0.9 °C</code></pre><h3 id="Specificity-Check"><a class="docs-heading-anchor" href="#Specificity-Check">Specificity Check</a><a id="Specificity-Check-1"></a><a class="docs-heading-anchor-permalink" href="#Specificity-Check" title="Permalink"></a></h3><p>To manually ensure a primer doesn&#39;t bind elsewhere, you can use <code>miniblast</code>. It performs a fast, probabilistic sliding-window search for high-probability matches of a query sequence within the target MSA, evaluating both forward and reverse complement orientations. Note that <code>miniblast</code> automatically queries the core primer sequence (ignoring the adapter).</p><pre><code class="language-julia hljs">julia&gt; # Let&#39;s check the binding sites of the first pair&#39;s forward primer
+julia&gt; miniblast(alignment, a1a.first, 0.45)
+5-element Vector{MiniBlastHit}:
+ MiniBlastHit(6:25, :forward, 0.9)
+ MiniBlastHit(62:81, :reverse, 0.5349999999999999)
+ MiniBlastHit(18:37, :forward, 0.49000000000000005)
+ MiniBlastHit(15:34, :reverse, 0.475)
+ MiniBlastHit(10:29, :forward, 0.47000000000000003)
+
+julia&gt; # We can also search for a short conserved motif manually
+julia&gt; miniblast(alignment, &quot;CAT&quot;, 0.7)
+11-element Vector{MiniBlastHit}:
+ MiniBlastHit(76:78, :forward, 1.0)
+ MiniBlastHit(9:11, :reverse, 0.7333333333333334)</code></pre><h3 id="Exporting"><a class="docs-heading-anchor" href="#Exporting">Exporting</a><a id="Exporting-1"></a><a class="docs-heading-anchor-permalink" href="#Exporting" title="Permalink"></a></h3><p>Finally, you can easily export your designed primers for ordering:</p><pre><code class="language-julia hljs">julia&gt; export_evrogen(stdout, [a1, a1a, a2], scale=0.02)
+AMPL_1_F_6; GYAAYGAGCGKCAGACYGAC; 0.02
+AMPL_1_R_49; SGCTTCRGCSAGGTCKARTTC; 0.02
+AMPL_1_ADP_F_6; TACGGGCGYAAYGAGCGKCAGACYGAC; 0.02
+AMPL_1_ADP_R_49; GAACGATSGCTTCRGCSAGGTCKARTTC; 0.02
+AMPL_2_F_30; AAYTMGACCTSGCYGAAGCSCTG; 0.02
+AMPL_2_R_76; GAGCTTVGAATTGAGYTTGGC; 0.02
+
+julia&gt; export_evrogen(&quot;primers.txt&quot;, [a1, a1a, a2])
+&quot;primers.txt&quot;</code></pre></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 18 August 2026 01:05">Tuesday 18 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
